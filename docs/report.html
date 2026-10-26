@@ -3,87 +3,50 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ToggleMaster | Relatório de entrega — Fase 3</title>
+<title>ToggleMaster | Relatório de entrega — Fase 4</title>
 <style>@page{size:A4;margin:16mm 17mm}*{box-sizing:border-box}body{margin:0;background:#edf0f4;color:#243248;font:15px/1.6 Arial,sans-serif}main{max-width:960px;margin:32px auto;padding:48px 56px;background:white}header{border-top:6px solid #183d59;padding-top:20px;margin-bottom:28px}.eyebrow{font-size:12px;letter-spacing:2px;font-weight:bold;color:#4c6a80}h1{font-size:38px;color:#15364e;margin:10px 0}h2{font-size:21px;color:#183d59;border-bottom:1px solid #d7e0e7;padding-bottom:7px;margin:28px 0 12px;break-after:avoid}h3{font-size:16px;margin:18px 0 8px;break-after:avoid}p{margin:0 0 12px}a{color:#185c8d;overflow-wrap:anywhere}ul,ol{padding-left:22px;margin:8px 0 16px}li{margin:6px 0;break-inside:avoid}strong{color:#15364e}table{border-collapse:collapse;width:100%;margin:12px 0 18px;font-size:14px}th,td{text-align:left;padding:9px 11px;border-bottom:1px solid #d7e0e7;vertical-align:top}th{background:#edf3f7;color:#183d59}tr{break-inside:avoid}thead{display:table-header-group}code{font-size:.9em;overflow-wrap:anywhere}.meta,figcaption{color:#536478}.pending{padding:10px 14px;background:#f2f6f9;border-left:3px solid #4c6a80}.appendix{break-before:page}.chapter{break-before:page}figure{margin:16px 0;break-inside:avoid}img{display:block;max-width:100%;height:auto;margin:auto}figcaption{font-size:12px;margin-top:10px}footer{border-top:1px solid #d7e0e7;margin-top:24px;padding-top:10px;font-size:12px;break-inside:avoid}@media(max-width:640px){main{margin:0;padding:24px}table{font-size:12px}th,td{padding:6px}}@media print{body{background:white;font-size:10pt;line-height:1.45}main{padding:0;margin:0;max-width:none}h1{font-size:28pt}h2{font-size:15pt;margin-top:6mm}h3{font-size:11pt}table{font-size:9pt}th,td{padding:6px 8px}p{orphans:3;widows:3}a{text-decoration:none}.appendix h2{margin-top:0}.appendix img{max-height:220mm;object-fit:contain}}</style>
 </head>
 <body><main>
 <header>
-<div class="eyebrow">POSTECH · GRUPO 100 · FASE 3</div>
+<div class="eyebrow">POSTECH · GRUPO 100 · FASE 4</div>
 <h1>ToggleMaster</h1>
-<p class="meta">Relatório de entrega · Infraestrutura e DevSecOps</p>
+<p class="meta">Relatório de entrega · Observabilidade, APM e Self-Healing</p>
 </header>
 <section aria-labelledby="integrantes">
 <h2 id="integrantes">Integrantes</h2>
 <table>
-<thead><tr><th scope="col">Nome completo</th><th scope="col">Matrícula</th></tr></thead>
-<tbody><tr><td>Julio Cesar Diniz Nogueira</td><td>RM373719</td></tr></tbody>
+<thead><tr><th scope="col">Nome completo</th><th scope="col">Matrícula</th><th scope="col">Usuário</th></tr></thead>
+<tbody><tr><td>Julio Cesar Diniz Nogueira</td><td>RM373719</td><td>JulioDinizN</td></tr></tbody>
 </table>
 </section>
 <section>
 <h2>1. Acesso aos entregáveis</h2>
 <ul>
-<li><a href="https://github.com/JulioDinizN/tech-challenge-fase-3">Repositório principal — código, CI e infraestrutura</a></li>
-<li><a href="https://github.com/JulioDinizN/tech-challenge-fase-3-gitops">Repositório GitOps — estado desejado do Kubernetes</a></li>
-<li><a href="https://github.com/JulioDinizN/tech-challenge-fase-3/tree/main/docs">Documentação técnica</a></li>
+<li><a href="https://github.com/JulioDinizN/tech-challenge-fase-4">Repositório principal — código, instrumentação, CI e infraestrutura</a></li>
+<li><a href="https://github.com/JulioDinizN/tech-challenge-fase-4-gitops">Repositório GitOps — estado desejado do Kubernetes e stack de observabilidade</a></li>
+<li><a href="https://github.com/JulioDinizN/tech-challenge-fase-4/tree/main/docs">Documentação técnica</a></li>
 </ul>
-<p class="pending"><strong>Vídeo da Fase 3:</strong> <a href="https://drive.google.com/file/d/1-sSwyvCVKVUdlNq462ezvanIvjVPrwN9/view?usp=drive_link">Assistir à demonstração — ToggleMaster Fase 3</a></p>
+<p class="pending"><strong>Vídeo da Fase 4:</strong> pendente.</p>
 </section>
 <section>
-<h2>2. Solução e decisões de arquitetura</h2>
-<p>A solução integra cinco microsserviços com infraestrutura como código, verificações DevSecOps e entrega por GitOps. Utiliza OCI, com substituição de provedor aceita pela disciplina. A estimativa AWS acompanha a entrega.</p>
-<h3>Organização e responsabilidades</h3>
-<ul>
-<li><strong>Ambiente:</strong> homologação temporária para demonstração e controle de custos.</li>
-<li><strong>Terraform:</strong> roots <code>backend</code>, <code>core</code> e <code>platform</code> com states separados. O core instancia o módulo composto <code>oci-runtime</code>.</li>
-<li><strong>Plataforma:</strong> instalação do Argo CD via Helm, gerenciada pelo Terraform.</li>
-<li><strong>CI:</strong> testes, análise estática e scans por serviço. Após aprovação, publica as imagens verificadas com tags derivadas do SHA do commit.</li>
-<li><strong>GitOps:</strong> promoção das tags no repositório dedicado e reconciliação automática pelo Argo CD.</li>
-<li><strong>Segredos:</strong> OCI Vault, Workload Identity e CSI no runtime. Credenciais de publicação ficam restritas aos jobs que precisam delas.</li>
-</ul>
-<h3>Correspondência entre provedores</h3>
-<table><thead><tr><th scope="col">Componente</th><th scope="col">AWS</th><th scope="col">OCI utilizada</th></tr></thead><tbody>
-<tr><td>Rede</td><td>VPC</td><td>VCN</td></tr>
-<tr><td>Kubernetes</td><td>EKS</td><td>OKE</td></tr>
-<tr><td>Banco relacional</td><td>RDS</td><td>OCI PostgreSQL</td></tr>
-<tr><td>Cache</td><td>ElastiCache</td><td>OCI Cache</td></tr>
-<tr><td>Fila</td><td>SQS</td><td>OCI Queue</td></tr>
-<tr><td>Banco NoSQL</td><td>DynamoDB</td><td>OCI NoSQL</td></tr>
-<tr><td>Registro de imagens</td><td>ECR</td><td>OCIR</td></tr>
-<tr><td>Armazenamento de objetos</td><td>S3</td><td>Object Storage</td></tr>
-</tbody></table>
-</section>
-<section class="appendix"><h2>Arquitetura da solução</h2><figure><img src="diagrams/overall-architecture.png" alt="Arquitetura da solução"><figcaption>Visão geral da infraestrutura e do fluxo de entrega.</figcaption></figure></section>
-<section class="appendix"><h2>Arquitetura de runtime</h2><figure><img src="diagrams/runtime-architecture.png" alt="Arquitetura de runtime"><figcaption>Serviços e integrações de execução.</figcaption></figure></section>
-<section class="chapter">
-<h2>3. Desafios de implementação</h2>
-<ul>
-<li>Preservar os contratos dos cinco microsserviços durante a evolução da infraestrutura e da entrega.</li>
-<li>Separar a validação sem credenciais dos jobs de publicação e definir um único responsável por cada recurso Kubernetes.</li>
-<li>Coordenar a disponibilização de secrets e a inicialização dos bancos antes dos workloads.</li>
-<li>Validar workers OKE 1.34.2 com Oracle Linux 8.10 build1462 e shape E3 Flex, corrigindo labels reservadas do kubelet.</li>
-<li>Limitar as permissões do ingress para acesso a secrets.</li>
-<li>Definir a ordem de teardown considerando o Load Balancer gerenciado pelo Kubernetes.</li>
-</ul>
+<h2>2. Arquitetura de observabilidade</h2>
+<p class="pending">Pendente: fluxo dos serviços para o OpenTelemetry Collector e roteamento para Prometheus, Loki e APM.</p>
 </section>
 <section>
-<h2>4. Estimativas de custo</h2>
-<table><thead><tr><th scope="col">Cenário</th><th scope="col">Período</th><th scope="col">Total (US$)</th><th scope="col">Premissa</th></tr></thead><tbody>
-<tr><td>AWS</td><td>730 horas</td><td>1.077,49</td><td>Sem free tier</td></tr>
-<tr><td>OCI — estimador</td><td>744 horas</td><td>675,20</td><td>Com franquias</td></tr>
-<tr><td>OCI — comparação</td><td>730 horas</td><td>672,20</td><td>Sem franquias</td></tr>
-</tbody></table>
-<p>Os valores representam cenários mensais, não o custo exato de uma sessão de gravação. A estimativa original considera workers E5; o ambiente implantado utiliza E3.</p>
-<p><a href="https://github.com/JulioDinizN/tech-challenge-fase-3/blob/main/docs/costs/README.md">Premissas, limitações e diferença de custo entre E5 e E3</a>.</p>
-<h3>Estimadores e arquivos de apoio</h3>
+<h2>3. Justificativa técnica</h2>
+<h3>APM: Datadog ou New Relic</h3>
+<p class="pending">Pendente.</p>
+<h3>Gestão de incidentes: PagerDuty ou OpsGenie</h3>
+<p class="pending">Pendente.</p>
+</section>
+<section>
+<h2>4. Evidências</h2>
 <ul>
-<li><a href="https://calculator.aws/#/estimate?id=b49777aec14492a057f24a0d2a39f829464dbd85">Estimativa salva no AWS Pricing Calculator</a>.</li>
-<li><a href="https://www.oracle.com/cloud/costestimator.html">Oracle Cloud Cost Estimator</a>: importar <a href="https://github.com/JulioDinizN/tech-challenge-fase-3/blob/main/docs/costs/oci-estimate.json">oci-estimate.json</a> para restaurar a configuração.</li>
-<li>Estimativas em PDF: <a href="https://github.com/JulioDinizN/tech-challenge-fase-3/blob/main/docs/costs/aws-estimate.pdf">AWS</a> e <a href="https://github.com/JulioDinizN/tech-challenge-fase-3/blob/main/docs/costs/oci-estimate.pdf">OCI</a>.</li>
-<li>As capturas dos estimadores estão apresentadas a seguir.</li>
+<li class="pending">Dashboard customizado no Grafana — pendente.</li>
+<li class="pending">Trace distribuído no APM — pendente.</li>
+<li class="pending">Notificação de incidente no ChatOps — pendente.</li>
+<li class="pending">Log/execução da automação de Self-Healing — pendente.</li>
 </ul>
 </section>
-<section class="appendix"><h2>Estimativa AWS — resumo</h2><figure><img src="costs/aws-calculator.png" alt="Estimativa AWS — resumo"><figcaption>Captura do estimador oficial AWS. Base: 730 horas.</figcaption></figure></section>
-<section class="appendix"><h2>Estimativa AWS — detalhamento</h2><figure><img src="costs/aws-calculator-details.png" alt="Estimativa AWS — detalhamento"><figcaption>Detalhamento da estimativa AWS equivalente.</figcaption></figure></section>
-<section class="appendix"><h2>Estimativa OCI</h2><figure><img src="costs/oci-calculator.png" alt="Estimativa OCI"><figcaption>Captura do estimador oficial OCI. Base: 744 horas, com franquias. Premissas e ajuste E5/E3 documentados em costs/README.md.</figcaption></figure></section>
-<footer>ToggleMaster · Tech Challenge Fase 3 · Julio Cesar Diniz Nogueira · RM373719 · Grupo 100</footer>
+<footer>ToggleMaster · Tech Challenge Fase 4 · Julio Cesar Diniz Nogueira · RM373719 · Grupo 100</footer>
 </main></body></html>

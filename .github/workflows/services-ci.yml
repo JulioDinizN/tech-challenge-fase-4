@@ -105,7 +105,7 @@ jobs:
       - name: Check out GitOps repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: JulioDinizN/tech-challenge-fase-3-gitops
+          repository: JulioDinizN/tech-challenge-fase-4-gitops
           ssh-key: ${{ secrets.GITOPS_SSH_KEY }}
           path: gitops
 

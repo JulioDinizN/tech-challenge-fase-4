@@ -1,4 +1,4 @@
 bucket = "replace-with-state-bucket"
 namespace = "replace-with-namespace"
 region = "us-ashburn-1"
-key = "togglemaster/phase3/homolog/platform.tfstate"
+key = "togglemaster/phase4/homolog/platform.tfstate"

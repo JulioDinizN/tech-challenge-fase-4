@@ -31,7 +31,7 @@ def fixture():
 
 class ConfigureTests(unittest.TestCase):
     def test_initial_values_render_all_workloads_with_immutable_images(self):
-        gitops = ROOT.parent/'tech-challenge-fase-3-gitops'
+        gitops = ROOT.parent/'tech-challenge-fase-4-gitops'
         if not gitops.exists():
             self.skipTest('sibling GitOps checkout required')
         with tempfile.TemporaryDirectory() as tmp:

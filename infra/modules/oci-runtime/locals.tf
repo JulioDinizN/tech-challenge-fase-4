@@ -21,7 +21,7 @@ locals {
   common_tags = merge({
     Project   = var.project_name
     ManagedBy = "Terraform"
-    Course    = "POSTECH-Tech-Challenge-Fase-3"
+    Course    = "POSTECH-Tech-Challenge-Fase-4"
   }, var.freeform_tags)
 }
 

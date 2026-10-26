@@ -1,4 +1,4 @@
-# Scripts da Fase 3
+# Scripts da Fase 4
 
 ```text
 scripts/
@@ -30,7 +30,7 @@ A publicação pertence ao GitHub Actions, os add-ons ao Terraform platform e os
 
 O configurador é usado somente no bootstrap. Promoções posteriores são feitas pelo CI e preservam as tags dos serviços inalterados.
 
-Com o kubeconfig privado selecionado, executar `./scripts/ops/smoke-oke.sh`. O script obtém a credencial de runtime sem imprimi-la e verifica autenticação, flag, regra e avaliação. Não habilitar shell tracing (`set -x`). Procedimentos em [operações](../docs/phase3-operations.md).
+Com o kubeconfig privado selecionado, executar `./scripts/ops/smoke-oke.sh`. O script obtém a credencial de runtime sem imprimi-la e verifica autenticação, flag, regra e avaliação. Não habilitar shell tracing (`set -x`). Procedimentos em [operações](../docs/operations.md).
 
 ## Documentação e manutenção
 

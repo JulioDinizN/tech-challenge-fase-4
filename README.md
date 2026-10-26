@@ -1,12 +1,12 @@
-# POSTECH Tech Challenge — Fase 3
+# POSTECH Tech Challenge — Fase 4
 
-ToggleMaster: cinco microsserviços com infraestrutura Terraform, CI/DevSecOps no GitHub Actions e entrega automática por GitOps no OCI Kubernetes Engine (OKE).
+ToggleMaster: cinco microsserviços com infraestrutura Terraform, CI/DevSecOps no GitHub Actions e entrega por GitOps no OCI Kubernetes Engine (OKE). A Fase 4 adiciona observabilidade com OpenTelemetry, Prometheus, Loki e Grafana, APM com traces distribuídos, alertas com gestão de incidentes e ChatOps, e automação de Self-Healing.
 
 ## Repositórios e entrega
 
-- [Código, infraestrutura e CI](https://github.com/JulioDinizN/tech-challenge-fase-3).
-- [Estado desejado Kubernetes](https://github.com/JulioDinizN/tech-challenge-fase-3-gitops).
-- [Documentação](docs/README.md), [relatório](docs/report.html) e [estimativas AWS/OCI](docs/costs/README.md).
+- [Código, infraestrutura e CI](https://github.com/JulioDinizN/tech-challenge-fase-4).
+- [Estado desejado Kubernetes](https://github.com/JulioDinizN/tech-challenge-fase-4-gitops).
+- [Documentação](docs/README.md), [observabilidade](docs/observability.md) e [relatório](docs/report.html).
 
 ## Fluxo de entrega
 
@@ -31,8 +31,9 @@ docker-compose.yml           # Ambiente local
 infra/environments/homolog/  # Roots backend, core e platform
 infra/modules/oci-runtime/   # Recursos OCI separados por responsabilidade
 scripts/ci/                  # Detecção de alterações e promoção GitOps
+scripts/self-healing/        # Automação de resposta aos alertas
 scripts/                     # Bootstrap, verificações e geração dos documentos
-docs/                        # Arquitetura, operação, decisões, custos e relatório
+docs/                        # Arquitetura, observabilidade, operação, decisões e relatório
 ```
 
 Os manifests Kubernetes ficam exclusivamente no repositório GitOps. `backend`, `core` e `platform` representam responsabilidades com states separados de um único ambiente de homologação.
@@ -50,7 +51,7 @@ Os manifests Kubernetes ficam exclusivamente no repositório GitOps. `backend`, 
 ## Desenvolvimento e operação
 
 - [Desenvolvimento local](docs/local-development.md).
-- [Validação, bootstrap e encerramento](docs/phase3-operations.md).
+- [Validação, bootstrap e encerramento](docs/operations.md).
 - [Catálogo de scripts](scripts/README.md).
 - [Arquitetura e diagramas](docs/architecture.md).
 
@@ -64,4 +65,4 @@ A verificação local não publica imagens nem altera o cluster. O ambiente de d
 
 ## Proveniência
 
-Os serviços evoluem da Fase 2, commit `00bc8a4565aeaba4dc65212251c98f7df465d0f1` de `JulioDinizN/tech-challenge-fase-2`. A entrega atual mantém somente a infraestrutura e a automação da Fase 3.
+Este repositório evolui da Fase 3, commit `ccd8b7dbd66fe02561f87454442791d0d6681668` de `JulioDinizN/tech-challenge-fase-3`, preservando seu histórico. A stack de monitoramento, a instrumentação dos serviços e o Self-Healing são as adições da Fase 4.

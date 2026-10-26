@@ -11,5 +11,5 @@ variable "bootstrap_gitops" {
 }
 variable "gitops_repository" {
   type    = string
-  default = "https://github.com/JulioDinizN/tech-challenge-fase-3-gitops.git"
+  default = "https://github.com/JulioDinizN/tech-challenge-fase-4-gitops.git"
 }

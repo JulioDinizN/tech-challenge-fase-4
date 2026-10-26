@@ -1,10 +1,10 @@
-# Documentação — Fase 3
+# Documentação — Fase 4
 
 - [Arquitetura](architecture.md): Terraform, fluxo CI/GitOps e runtime OCI.
-- [Operação](phase3-operations.md): validação, bootstrap, acesso e encerramento.
+- [Observabilidade](observability.md): OpenTelemetry, métricas, logs, APM, alertas e Self-Healing.
+- [Operação](operations.md): validação, bootstrap, acesso e encerramento.
 - [Decisões](decisions/0001-repository-strategy.md): estratégia de repositórios, CI e segredos.
 - [Desenvolvimento local](local-development.md): execução dos serviços com Docker Compose.
-- [Estimativas AWS e OCI](costs/README.md): PDFs, capturas, links e memória de cálculo.
 - [Scripts](../scripts/README.md): automação mantida nesta entrega.
 
 ## Diagramas
@@ -18,6 +18,4 @@ As fontes `.drawio` são editáveis. `npm run diagrams:export` regenera os PNGs 
 
 ## Relatório
 
-[PDF de entrega](../dist/delivery-report.pdf), [HTML com anexos](report.html) e [TXT](report.txt). O relatório inclui o link do vídeo de demonstração.
-
-`npm run report:pdf` gera `dist/delivery-report.pdf`, versionado junto com o HTML e o TXT. O HTML é a fonte de impressão; o PDF inclui diagramas e capturas das estimativas. O PDF é gerado a partir da versão atual do HTML.
+[HTML](report.html) é a fonte de impressão. `npm run report:pdf` gera `dist/delivery-report.pdf`, versionado junto com o HTML. O relatório incluirá o link do vídeo e as evidências exigidas pela Fase 4.

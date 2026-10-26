@@ -1,10 +1,10 @@
-# Operação — Fase 3
+# Operação — Fase 4
 
 O Terraform gerencia a infraestrutura e os add-ons. GitHub Actions publica imagens e promove tags; Argo CD reconcilia os workloads. Operações de provisionamento e encerramento devem usar exclusivamente os roots de homologação descritos abaixo.
 
 ## Validação sem provisionamento
 
-Instalar ferramentas Terraform, kubectl, Python e Docker CLI. Criar um venv e instalar `../tech-challenge-fase-3-gitops/scripts/requirements.txt` nele. Em uma cópia isolada para validação, inicializar os roots com `terraform -chdir=infra/environments/homolog/<root> init -backend=false -input=false`; isso baixa providers, sem configurar state remoto. Não executar esse init sobre um diretório de operação já configurado com backend remoto. Em checkouts de operação, manter o backend existente. Em seguida:
+Instalar ferramentas Terraform, kubectl, Python e Docker CLI. Criar um venv e instalar `../tech-challenge-fase-4-gitops/scripts/requirements.txt` nele. Em uma cópia isolada para validação, inicializar os roots com `terraform -chdir=infra/environments/homolog/<root> init -backend=false -input=false`; isso baixa providers, sem configurar state remoto. Não executar esse init sobre um diretório de operação já configurado com backend remoto. Em checkouts de operação, manter o backend existente. Em seguida:
 
 ```bash
 PYTHON_BIN=/caminho/do/venv/bin/python ./scripts/validate.sh
@@ -41,9 +41,9 @@ O primeiro boot da build `1578` completou initramfs/cloud-init, mas revelou um s
 
    ```bash
    python3 scripts/ops/configure-gitops.py \
-     --gitops-root ../tech-challenge-fase-3-gitops \
+     --gitops-root ../tech-challenge-fase-4-gitops \
      --initial-image-tag sha-<12-hex-do-push>
-   python3 ../tech-challenge-fase-3-gitops/scripts/validate_structure.py --ready
+   python3 ../tech-challenge-fase-4-gitops/scripts/validate_structure.py --ready
    ```
 
    Esse comando lê apenas outputs conhecidos do core, substitui identificadores não secretos e as cinco tags iniciais; não aplica nem publica. Usá-lo somente no bootstrap, pois altera as tags dos cinco serviços. Revisar o diff antes de publicar. Promoções seguintes usam `promote_gitops.py` e preservam tags dos serviços inalterados.

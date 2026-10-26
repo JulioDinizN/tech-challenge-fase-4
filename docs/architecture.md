@@ -1,6 +1,6 @@
-# Arquitetura — ToggleMaster Fase 3
+# Arquitetura — ToggleMaster Fase 4
 
-A solução usa OCI, com substituição de provedor aceita pela disciplina. O Terraform define a infraestrutura e o Argo CD reconcilia os workloads a partir do repositório GitOps.
+A solução usa OCI, com substituição de provedor aceita pela disciplina. O Terraform define a infraestrutura e o Argo CD reconcilia os workloads a partir do repositório GitOps. A camada de observabilidade da Fase 4 está descrita em [observability.md](observability.md).
 
 ## Ambiente e organização Terraform
 
@@ -39,7 +39,7 @@ Compose oferece desenvolvimento local. A validação das integrações OCI exige
 
 As fontes `.drawio` são editáveis e `npm run diagrams:export` regenera os PNGs. Os desenhos representam a arquitetura; não são evidência de implantação.
 
-- [Operação e encerramento](phase3-operations.md)
-- [Estimativas AWS e OCI](costs/README.md)
+- [Operação e encerramento](operations.md)
+- [Observabilidade](observability.md)
 - [Relatório da entrega](report.html)
 - [Decisões](decisions/0001-repository-strategy.md)

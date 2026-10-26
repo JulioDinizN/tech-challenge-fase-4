@@ -4,7 +4,7 @@ set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo"
 python_bin="${PYTHON_BIN:-python3}"
-gitops_root="${GITOPS_ROOT:-$repo/../tech-challenge-fase-3-gitops}"
+gitops_root="${GITOPS_ROOT:-$repo/../tech-challenge-fase-4-gitops}"
 "$python_bin" -m unittest discover -s scripts/tests -p 'test_*.py' -v
 # Check source files only; do not format ignored environment parameters.
 while IFS= read -r -d '' file; do

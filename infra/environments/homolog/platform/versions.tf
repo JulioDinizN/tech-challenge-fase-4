@@ -3,7 +3,7 @@ terraform {
   backend "oci" {
     bucket    = "configured-at-init"
     namespace = "configured-at-init"
-    key       = "togglemaster/phase3/homolog/platform.tfstate"
+    key       = "togglemaster/phase4/homolog/platform.tfstate"
   }
   required_providers {
     helm = { source = "hashicorp/helm", version = "3.2.0" }

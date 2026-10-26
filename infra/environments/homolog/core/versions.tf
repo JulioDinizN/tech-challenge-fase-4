@@ -3,7 +3,7 @@ terraform {
   backend "oci" {
     bucket    = "configured-at-init"
     namespace = "configured-at-init"
-    key       = "togglemaster/phase3/homolog/core.tfstate"
+    key       = "togglemaster/phase4/homolog/core.tfstate"
   }
   required_providers {
     oci = {

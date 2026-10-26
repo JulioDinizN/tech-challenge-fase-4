@@ -6,4 +6,4 @@ Os parâmetros de ambiente usam `terraform.tfvars.example` e `backend.hcl.exampl
 
 Para um checkout já inicializado, executar `terraform -chdir=infra/environments/homolog/core plan -input=false`. Não inicializar sem backend sobre um diretório de operação já configurado. Antes de uma nova implantação, conferir disponibilidade da imagem OKE, versão Kubernetes, quotas, shapes e proprietário de cada recurso.
 
-Procedimento completo em [operações](../../../../docs/phase3-operations.md).
+Procedimento completo em [operações](../../../../docs/operations.md).
