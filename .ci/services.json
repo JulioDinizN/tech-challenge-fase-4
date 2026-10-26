@@ -1,7 +1,7 @@
 [
-  {"name":"auth-service","path":"services/auth-service","language":"go","runtime_version":"1.27.x"},
+  {"name":"auth-service","path":"services/auth-service","language":"go","runtime_version":"1.27.1"},
   {"name":"flag-service","path":"services/flag-service","language":"python","runtime_version":"3.11"},
   {"name":"targeting-service","path":"services/targeting-service","language":"python","runtime_version":"3.11"},
-  {"name":"evaluation-service","path":"services/evaluation-service","language":"go","runtime_version":"1.27.x"},
+  {"name":"evaluation-service","path":"services/evaluation-service","language":"go","runtime_version":"1.27.1"},
   {"name":"analytics-service","path":"services/analytics-service","language":"python","runtime_version":"3.11"}
 ]
