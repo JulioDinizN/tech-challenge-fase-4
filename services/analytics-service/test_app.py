@@ -89,8 +89,7 @@ class TraceContextTests(unittest.TestCase):
         message = SimpleNamespace(
             id="traced-event",
             receipt="receipt-traced",
-            content=json.dumps({"user_id": "user-1"}),
-            metadata=SimpleNamespace(custom_properties={"traceparent": traceparent}),
+            content=json.dumps({"user_id": "user-1", "trace_context": {"traceparent": traceparent}}),
         )
 
         analytics_app.process_message(message, FakeQueueClient(), FakeNosqlClient())
@@ -100,7 +99,7 @@ class TraceContextTests(unittest.TestCase):
         self.assertEqual(format(span.context.trace_id, "032x"), "0af7651916cd43dd8448eb211c80319c")
         self.assertEqual(format(span.parent.span_id, "016x"), "b7ad6b7169203331")
 
-    def test_message_without_metadata_starts_new_trace(self):
+    def test_message_without_trace_context_starts_new_trace(self):
         message = SimpleNamespace(id="plain", receipt="r", content="{}")
         self.assertEqual(analytics_app.message_trace_context(message), {})
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"go.opentelemetry.io/otel"
@@ -80,5 +81,26 @@ func TestTracePropertiesCarryParentSpan(t *testing.T) {
 	want := "00-01000000000000000000000000000000-0200000000000000-01"
 	if properties["traceparent"] != want {
 		t.Fatalf("traceparent = %q, want %q", properties["traceparent"], want)
+	}
+}
+
+func TestPublishedEventCarriesTraceContext(t *testing.T) {
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	publisher := &fakeEventPublisher{}
+	app := &App{EventPublisher: publisher}
+	parent := trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{3},
+		SpanID:     trace.SpanID{4},
+		TraceFlags: trace.FlagsSampled,
+	}))
+
+	app.sendEvaluationEvent(parent, "user-123", "new-checkout", true)
+
+	var event EvaluationEvent
+	if err := json.Unmarshal([]byte(publisher.content), &event); err != nil {
+		t.Fatalf("payload inválido: %v", err)
+	}
+	if !strings.HasPrefix(event.TraceContext["traceparent"], "00-03000000000000000000000000000000-") {
+		t.Fatalf("traceparent ausente ou de outro trace: %v", event.TraceContext)
 	}
 }

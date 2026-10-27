@@ -113,10 +113,12 @@ else:
 
 
 def message_trace_context(message):
-    """Extract the producer trace context sent by evaluation-service in the message metadata."""
-    metadata = getattr(message, "metadata", None)
-    properties = getattr(metadata, "custom_properties", None) or {}
-    return propagate.extract(properties)
+    """Extract the producer trace context that evaluation-service writes in the event body."""
+    try:
+        carrier = json.loads(message.content).get("trace_context") or {}
+    except (TypeError, ValueError, AttributeError):
+        carrier = {}
+    return propagate.extract(carrier if isinstance(carrier, dict) else {})
 
 
 def process_message(message, queue=None, nosql=None):

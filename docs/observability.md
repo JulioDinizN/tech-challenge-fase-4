@@ -46,7 +46,7 @@ Todos os charts são Applications do Argo CD com versões fixas, no projeto `obs
 Detalhes relevantes:
 
 - **Propagação W3C (`traceparent`).** O evaluation-service propaga o contexto nas chamadas HTTP para flag e targeting; estes propagam para o auth-service.
-- **Fila.** O evaluation-service grava o `traceparent` nos metadados (`customProperties`) da mensagem da OCI Queue. O analytics-service extrai esse contexto e cria o span `process togglemaster-analytics`, continuando o mesmo trace. Assim o Service Map mostra os cinco serviços.
+- **Fila.** O evaluation-service grava o `traceparent` no campo `trace_context` do evento publicado na OCI Queue (os metadados da fila exigem `channelId`, recurso que o projeto não usa). O analytics-service extrai esse contexto e cria o span `process togglemaster-analytics`, continuando o mesmo trace. Assim o Service Map mostra os cinco serviços.
 - **Métricas HTTP.** Go e Python emitem `http.server.request.duration` (convenção estável; Python com `OTEL_SEMCONV_STABILITY_OPT_IN=http`). No Prometheus: `http_server_request_duration_seconds_{count,sum,bucket}`, com o serviço no rótulo `job`.
 - **Logs com trace.** Logs emitidos durante uma requisição carregam `trace_id` e `span_id`. Os logs dos cinco serviços chegam por OTLP; os demais contêineres do cluster são lidos pelo `file_log` do Collector, que exclui os cinco serviços para não duplicar.
 - **`/health` não é rastreado**, para que as sondas do Kubernetes não poluam traces e taxas.
