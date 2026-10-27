@@ -71,5 +71,39 @@ class ProcessMessageTests(unittest.TestCase):
         self.assertEqual(self.nosql.updates, [])
 
 
+class TraceContextTests(unittest.TestCase):
+    def test_consumer_span_continues_producer_trace(self):
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
+
+        exporter = InMemorySpanExporter()
+        provider = TracerProvider()
+        provider.add_span_processor(SimpleSpanProcessor(exporter))
+        analytics_app.tracer = provider.get_tracer("test")
+
+        traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+        message = SimpleNamespace(
+            id="traced-event",
+            receipt="receipt-traced",
+            content=json.dumps({"user_id": "user-1"}),
+            metadata=SimpleNamespace(custom_properties={"traceparent": traceparent}),
+        )
+
+        analytics_app.process_message(message, FakeQueueClient(), FakeNosqlClient())
+
+        (span,) = exporter.get_finished_spans()
+        self.assertEqual(span.kind, trace.SpanKind.CONSUMER)
+        self.assertEqual(format(span.context.trace_id, "032x"), "0af7651916cd43dd8448eb211c80319c")
+        self.assertEqual(format(span.parent.span_id, "016x"), "b7ad6b7169203331")
+
+    def test_message_without_metadata_starts_new_trace(self):
+        message = SimpleNamespace(id="plain", receipt="r", content="{}")
+        self.assertEqual(analytics_app.message_trace_context(message), {})
+
+
 if __name__ == "__main__":
     unittest.main()

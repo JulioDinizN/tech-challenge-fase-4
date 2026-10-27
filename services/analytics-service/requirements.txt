@@ -3,3 +3,9 @@ Werkzeug<3
 gunicorn==20.1.0
 python-dotenv==0.21.0
 oci==2.181.1
+opentelemetry-api==1.45.1
+opentelemetry-sdk==1.45.1
+opentelemetry-distro==0.66b1
+opentelemetry-exporter-otlp-proto-http==1.45.1
+opentelemetry-instrumentation-flask==0.66b1
+opentelemetry-instrumentation-logging==0.66b1

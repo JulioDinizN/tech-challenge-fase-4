@@ -8,8 +8,15 @@ import time
 import oci
 from dotenv import load_dotenv
 from flask import Flask, jsonify
+from opentelemetry import propagate, trace
+from opentelemetry.trace import SpanKind, Status, StatusCode
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# Logs no stdout. Com OpenTelemetry ativo, o handler OTLP já está na raiz e
+# basicConfig seria ignorado, por isso o handler de console é adicionado explicitamente.
+_console = logging.StreamHandler()
+_console.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
+logging.getLogger().addHandler(_console)
+logging.getLogger().setLevel(logging.INFO)
 log = logging.getLogger(__name__)
 
 load_dotenv()
@@ -25,6 +32,9 @@ OCI_QUEUE_MESSAGES_ENDPOINT = os.getenv("OCI_QUEUE_MESSAGES_ENDPOINT")
 OCI_NOSQL_TABLE = os.getenv("OCI_NOSQL_TABLE")
 OCI_COMPARTMENT_OCID = os.getenv("OCI_COMPARTMENT_OCID")
 OCI_AUTH_MODE = os.getenv("OCI_AUTH_MODE", "workload_identity").lower()
+ANALYTICS_QUEUE_NAME = "togglemaster-analytics"
+
+tracer = trace.get_tracer("analytics-service")
 
 
 def validate_worker_configuration():
@@ -102,7 +112,33 @@ else:
     log.info("Analytics worker disabled for local execution.")
 
 
+def message_trace_context(message):
+    """Extract the producer trace context sent by evaluation-service in the message metadata."""
+    metadata = getattr(message, "metadata", None)
+    properties = getattr(metadata, "custom_properties", None) or {}
+    return propagate.extract(properties)
+
+
 def process_message(message, queue=None, nosql=None):
+    """Process one OCI Queue message as a consumer span linked to the producer trace."""
+    with tracer.start_as_current_span(
+        f"process {ANALYTICS_QUEUE_NAME}",
+        context=message_trace_context(message),
+        kind=SpanKind.CONSUMER,
+        attributes={
+            "messaging.system": "oci_queue",
+            "messaging.destination.name": ANALYTICS_QUEUE_NAME,
+            "messaging.operation.type": "process",
+            "messaging.message.id": str(message.id),
+        },
+    ) as span:
+        processed = _store_message(message, queue, nosql)
+        if not processed:
+            span.set_status(Status(StatusCode.ERROR, "message not processed"))
+        return processed
+
+
+def _store_message(message, queue=None, nosql=None):
     """Persist one OCI Queue message in NoSQL, then acknowledge it."""
     queue = queue or queue_client
     nosql = nosql or nosql_client

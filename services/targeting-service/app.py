@@ -12,8 +12,12 @@ from psycopg2 import sql
 from psycopg2.extras import Json, RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
 
-# Configura o logging
-logging.basicConfig(level=logging.INFO)
+# Logs no stdout. Com OpenTelemetry ativo, o handler OTLP já está na raiz e
+# basicConfig seria ignorado, por isso o handler de console é adicionado explicitamente.
+_console = logging.StreamHandler()
+_console.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
+logging.getLogger().addHandler(_console)
+logging.getLogger().setLevel(logging.INFO)
 log = logging.getLogger(__name__)
 
 # Carrega .env para desenvolvimento local
@@ -36,7 +40,9 @@ except ValueError as error:
 
 # --- Pool de Conexão com o Banco ---
 try:
-    pool = SimpleConnectionPool(1, 5, **DATABASE_CONFIG)
+    # RealDictCursor definido na conexão (e não em cada cursor) para que a
+    # instrumentação OpenTelemetry do psycopg2 também rastreie as consultas.
+    pool = SimpleConnectionPool(1, 5, cursor_factory=RealDictCursor, **DATABASE_CONFIG)
     log.info("Pool de conexões com o PostgreSQL (targeting) inicializado.")
 except psycopg2.OperationalError as e:
     log.critical(f"Erro fatal ao conectar ao PostgreSQL: {e}")
@@ -91,7 +97,7 @@ def create_rule():
     cur = None
     try:
         conn = pool.getconn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur = conn.cursor()
         cur.execute(
             "INSERT INTO targeting_rules (flag_name, is_enabled, rules, created_at, updated_at) "
             "VALUES (%s, %s, %s, NOW(), NOW()) RETURNING *",
@@ -121,7 +127,7 @@ def get_rule(flag_name):
     cur = None
     try:
         conn = pool.getconn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur = conn.cursor()
         cur.execute("SELECT * FROM targeting_rules WHERE flag_name = %s", (flag_name,))
         rule = cur.fetchone()
         if not rule:
@@ -163,7 +169,7 @@ def update_rule(flag_name):
     cur = None
     try:
         conn = pool.getconn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur = conn.cursor()
         cur.execute(query, tuple(values))
         
         if cur.rowcount == 0:

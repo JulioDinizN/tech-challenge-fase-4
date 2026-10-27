@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/XSAM/otelsql"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/joho/godotenv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // App struct (para injeção de dependência)
@@ -19,6 +25,18 @@ type App struct {
 func main() {
 	// Carrega o .env para desenvolvimento local. Em produção, isso não fará nada.
 	_ = godotenv.Load()
+
+	shutdownTelemetry, err := setupTelemetry(context.Background())
+	if err != nil {
+		log.Fatalf("Não foi possível configurar o OpenTelemetry: %v", err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdownTelemetry(ctx); err != nil {
+			log.Printf("Erro ao finalizar o OpenTelemetry: %v", err)
+		}
+	}()
 
 	// --- Configuração ---
 	port := os.Getenv("PORT")
@@ -55,6 +73,7 @@ func main() {
 		DB:        db,
 		MasterKey: masterKey,
 	}
+	faults := &faultInjector{enabled: os.Getenv("FAULT_INJECTION_ENABLED") == "true"}
 
 	// --- Rotas da API ---
 	mux := http.NewServeMux()
@@ -67,15 +86,34 @@ func main() {
 	// Eles são protegidos pelo middleware de autenticação
 	mux.Handle("/admin/keys", app.masterKeyAuthMiddleware(http.HandlerFunc(app.createKeyHandler)))
 
+	// Injeção de falha para a demonstração de alerta e Self-Healing
+	mux.Handle("/admin/fault", app.masterKeyAuthMiddleware(http.HandlerFunc(faults.handler)))
+
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           instrumentHandler(faults.middleware(mux)),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
 	log.Printf("Serviço de Autenticação (Go) rodando na porta %s", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Fatal(err)
+	if err := server.ListenAndServe(); err != nil {
+		log.Print(err)
 	}
 }
 
 // connectDB inicializa e testa a conexão com o PostgreSQL
 func connectDB(databaseURL string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", databaseURL)
+	db, err := otelsql.Open("pgx", databaseURL,
+		otelsql.WithAttributes(semconv.DBSystemNamePostgreSQL),
+		otelsql.WithSpanOptions(otelsql.SpanOptions{
+			OmitConnResetSession: true,
+			OmitRows:             true,
+			// Só cria spans de banco dentro de uma requisição rastreada.
+			SpanFilter: func(ctx context.Context, _ otelsql.Method, _ string, _ []driver.NamedValue) bool {
+				return trace.SpanContextFromContext(ctx).IsValid()
+			},
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}

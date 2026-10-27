@@ -17,5 +17,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 USER 10001
+# Instrumentação automática OpenTelemetry (Flask, requests, psycopg2 e logging).
+# O endpoint OTLP vem de OTEL_EXPORTER_OTLP_ENDPOINT, definido no ambiente de execução.
+ENV OTEL_SERVICE_NAME=targeting-service \
+    OTEL_TRACES_EXPORTER=otlp \
+    OTEL_METRICS_EXPORTER=otlp \
+    OTEL_LOGS_EXPORTER=otlp \
+    OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
+    OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true \
+    OTEL_SEMCONV_STABILITY_OPT_IN=http \
+    OTEL_PYTHON_EXCLUDED_URLS=health
+
 EXPOSE 8003
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8003} app:app"]
+CMD ["sh", "-c", "exec opentelemetry-instrument gunicorn --bind 0.0.0.0:${PORT:-8003} app:app"]

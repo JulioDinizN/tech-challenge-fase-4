@@ -10,6 +10,8 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"github.com/oracle/oci-go-sdk/v65/queue"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type OCIQueuePublisher struct {
@@ -88,7 +90,10 @@ func (p *OCIQueuePublisher) Publish(ctx context.Context, content string) error {
 		QueueId: common.String(p.queueID),
 		PutMessagesDetails: queue.PutMessagesDetails{
 			Messages: []queue.PutMessagesDetailsEntry{
-				{Content: common.String(content)},
+				{
+					Content:  common.String(content),
+					Metadata: &queue.MessageMetadata{CustomProperties: traceProperties(ctx)},
+				},
 			},
 		},
 	}
@@ -97,4 +102,12 @@ func (p *OCIQueuePublisher) Publish(ctx context.Context, content string) error {
 		return fmt.Errorf("publicar mensagem: %w", err)
 	}
 	return nil
+}
+
+// traceProperties serializa o contexto de trace (traceparent) nos metadados da
+// mensagem, permitindo que o consumidor continue o mesmo trace distribuído.
+func traceProperties(ctx context.Context) map[string]string {
+	carrier := propagation.MapCarrier{}
+	otel.GetTextMapPropagator().Inject(ctx, carrier)
+	return carrier
 }

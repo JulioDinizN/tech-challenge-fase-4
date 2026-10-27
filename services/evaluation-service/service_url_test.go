@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/url"
@@ -20,7 +21,7 @@ func TestFlagNamesCannotChangeServiceOrigin(t *testing.T) {
 				observed = r.URL
 				return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}, nil
 			})}}
-			if _, err := app.fetchFlag(name); err != nil {
+			if _, err := app.fetchFlag(context.Background(), name); err != nil {
 				t.Fatal(err)
 			}
 			if observed.Host != "flag-service:8002" || observed.RawQuery != "" || observed.Fragment != "" {
@@ -29,7 +30,7 @@ func TestFlagNamesCannotChangeServiceOrigin(t *testing.T) {
 			if observed.EscapedPath() != "/flags/"+url.PathEscape(name) {
 				t.Fatalf("unexpected path: %s", observed)
 			}
-			if _, err := app.fetchRule(name); err != nil {
+			if _, err := app.fetchRule(context.Background(), name); err != nil {
 				t.Fatal(err)
 			}
 			if observed.Host != "targeting-service:8003" || observed.RawQuery != "" || observed.Fragment != "" {
