@@ -21,6 +21,7 @@ def replacements(outputs, image_tag):
     repositories = outputs["ocir_repositories"]
     vault = outputs["vault"]
     names = vault["secret_names"]
+    integrations = names.get("observability_integrations", {})
 
     values = {
         "__IMAGE_TAG__": image_tag,
@@ -58,6 +59,12 @@ def replacements(outputs, image_tag):
         ),
         "__OCI_AUTH_MASTER_KEY_SECRET_NAME__": required(names, "auth_master_key"),
         "__OCI_INTERNAL_API_KEY_SECRET_NAME__": required(names, "internal_api_key"),
+        "__OCI_SELF_HEALING_TOKEN_SECRET_NAME__": required(names, "self_healing_token"),
+        "__OCI_GRAFANA_ADMIN_USER_SECRET_NAME__": required(names, "grafana_admin_user"),
+        "__OCI_GRAFANA_ADMIN_PASSWORD_SECRET_NAME__": required(names, "grafana_admin_password"),
+        "__OCI_NEW_RELIC_LICENSE_KEY_SECRET_NAME__": required(integrations, "new-relic-license-key"),
+        "__OCI_PAGERDUTY_INTEGRATION_KEY_SECRET_NAME__": required(integrations, "pagerduty-integration-key"),
+        "__OCI_DISCORD_WEBHOOK_URL_SECRET_NAME__": required(integrations, "discord-webhook-url"),
     }
 
     for service in (
@@ -66,6 +73,7 @@ def replacements(outputs, image_tag):
         "targeting-service",
         "evaluation-service",
         "analytics-service",
+        "self-healing",
     ):
         token = f"__OCIR_{service.upper().replace('-', '_')}_IMAGE__"
         values[token] = required(repositories[service], "image_path")
@@ -75,10 +83,10 @@ def replacements(outputs, image_tag):
 
 def configure(outputs, gitops, tag):
     if not re.fullmatch(r'sha-[0-9a-f]{12}', tag):
-        raise ValueError('initial image tag must be sha-<12 hex> and already published for all five services')
+        raise ValueError('initial image tag must be sha-<12 hex> and already published for all catalog images')
     values = replacements(outputs, tag)
     pending = {}
-    for p in list((gitops/'apps').rglob('*.yaml')) + list((gitops/'platform').rglob('*.yaml')):
+    for p in [f for d in ('apps', 'platform', 'observability') for f in (gitops/d).rglob('*.yaml')]:
         text = p.read_text()
         for token, value in values.items():
             # Values are inserted into plain YAML scalars; reject YAML injection.
