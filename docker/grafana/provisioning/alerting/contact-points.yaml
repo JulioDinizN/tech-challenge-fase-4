@@ -1,0 +1,28 @@
+apiVersion: 1
+
+# Destinos locais: o webhook-sink simula PagerDuty/Discord e o Self-Healing roda em DRY_RUN.
+# No cluster, os destinos reais (PagerDuty, Discord e Self-Healing) ficam no repositório GitOps.
+contactPoints:
+  - orgId: 1
+    name: togglemaster-incidents
+    receivers:
+      - uid: local-incident-sink
+        type: webhook
+        settings:
+          url: http://webhook-sink:8080/incident
+          httpMethod: POST
+      - uid: local-self-healing
+        type: webhook
+        settings:
+          url: http://self-healing:8080/webhook
+          httpMethod: POST
+          authorization_scheme: Bearer
+          authorization_credentials: $SELF_HEALING_TOKEN
+
+policies:
+  - orgId: 1
+    receiver: togglemaster-incidents
+    group_by: [alertname, deployment]
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 4h

@@ -1,0 +1,12 @@
+# Sobrescrita opcional: envia os traces também ao New Relic (APM).
+# Uso: docker compose -f docker-compose.yml -f docker-compose.newrelic.yml up
+exporters:
+  otlp_http/newrelic:
+    endpoint: ${env:NEW_RELIC_OTLP_ENDPOINT}
+    headers:
+      api-key: ${env:NEW_RELIC_LICENSE_KEY}
+
+service:
+  pipelines:
+    traces:
+      exporters: [otlp_grpc/jaeger, otlp_http/newrelic]

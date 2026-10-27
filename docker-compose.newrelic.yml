@@ -1,0 +1,8 @@
+# Envia os traces locais também ao New Relic. Requer NEW_RELIC_LICENSE_KEY no .env.
+# docker compose -f docker-compose.yml -f docker-compose.newrelic.yml up -d
+services:
+  otel-collector:
+    command: ["--config=/etc/otelcol/config.yaml", "--config=/etc/otelcol/newrelic.yaml"]
+    environment:
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:?defina NEW_RELIC_LICENSE_KEY no .env}
+      NEW_RELIC_OTLP_ENDPOINT: ${NEW_RELIC_OTLP_ENDPOINT:-https://otlp.nr-data.net}

@@ -1,3 +1,8 @@
+x-otel-env: &otel-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_METRIC_EXPORT_INTERVAL: "15000"
+
 services:
   auth-db:
     image: postgres:16-alpine
@@ -54,6 +59,8 @@ services:
       context: ./services/auth-service
     environment:
       PORT: "8001"
+      <<: *otel-env
+      FAULT_INJECTION_ENABLED: "true"
       DATABASE_URL: postgres://${POSTGRES_USER:-togglemaster}:${POSTGRES_PASSWORD:-togglemaster_local_password}@auth-db:5432/auth_db?sslmode=disable
       MASTER_KEY: ${MASTER_KEY:-admin-secreto-123}
       BOOTSTRAP_API_KEY: ${BOOTSTRAP_API_KEY:-tm_key_local_development_only}
@@ -74,6 +81,7 @@ services:
       context: ./services/flag-service
     environment:
       PORT: "8002"
+      <<: *otel-env
       DATABASE_URL: postgres://${POSTGRES_USER:-togglemaster}:${POSTGRES_PASSWORD:-togglemaster_local_password}@app-db:5432/flags_db?sslmode=disable
       AUTH_SERVICE_URL: http://auth-service:8001
     ports:
@@ -94,6 +102,7 @@ services:
       context: ./services/targeting-service
     environment:
       PORT: "8003"
+      <<: *otel-env
       DATABASE_URL: postgres://${POSTGRES_USER:-togglemaster}:${POSTGRES_PASSWORD:-togglemaster_local_password}@app-db:5432/targeting_db?sslmode=disable
       AUTH_SERVICE_URL: http://auth-service:8001
     ports:
@@ -114,6 +123,7 @@ services:
       context: ./services/evaluation-service
     environment:
       PORT: "8004"
+      <<: *otel-env
       REDIS_URL: redis://redis:6379
       FLAG_SERVICE_URL: http://flag-service:8002
       TARGETING_SERVICE_URL: http://targeting-service:8003
@@ -138,6 +148,7 @@ services:
       context: ./services/analytics-service
     environment:
       PORT: "8005"
+      <<: *otel-env
       ANALYTICS_WORKER_ENABLED: ${ANALYTICS_WORKER_ENABLED:-false}
     ports:
       - "8005:8005"
@@ -148,6 +159,80 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+
+  # --- Observabilidade ---
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.163.2
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./docker/otel-collector:/etc/otelcol:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - prometheus
+      - loki
+      - jaeger
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --storage.tsdb.retention.time=2d
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  loki:
+    image: grafana/loki:3.6.16
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "3100:3100"
+
+  jaeger:
+    image: jaegertracing/jaeger:2.22.0
+    ports:
+      - "16686:16686"
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      SELF_HEALING_TOKEN: ${SELF_HEALING_TOKEN:-local-self-healing-token}
+    volumes:
+      - ./docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/grafana/provisioning/alerting/contact-points.yaml:/etc/grafana/provisioning/alerting/contact-points.yaml:ro
+      # Dashboard e regras de alerta têm uma única fonte: o repositório GitOps.
+      - ${GITOPS_ROOT:-../tech-challenge-fase-4-gitops}/observability/config/grafana/dashboards:/var/lib/grafana/dashboards/togglemaster:ro
+      - ${GITOPS_ROOT:-../tech-challenge-fase-4-gitops}/observability/config/grafana/alerting/togglemaster-rules.yaml:/etc/grafana/provisioning/alerting/togglemaster-rules.yaml:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - jaeger
+
+  # Simula PagerDuty/Discord localmente: registra cada notificação recebida.
+  webhook-sink:
+    image: mendhak/http-https-echo:43
+    environment:
+      HTTP_PORT: "8080"
+      LOG_IGNORE_PATH: /health
+
+  self-healing:
+    build:
+      context: ./services/self-healing
+    environment:
+      SELF_HEALING_TOKEN: ${SELF_HEALING_TOKEN:-local-self-healing-token}
+      ALLOWED_DEPLOYMENTS: auth-service
+      DRY_RUN: "true"
+    ports:
+      - "8080:8080"
 
 volumes:
   auth-db-data:
