@@ -60,8 +60,14 @@ output "vault" {
       postgres_app_passwords = {
         for service, secret in oci_vault_secret.postgres_app_password : service => secret.secret_name
       }
-      auth_master_key  = oci_vault_secret.auth_master_key.secret_name
-      internal_api_key = oci_vault_secret.internal_api_key.secret_name
+      auth_master_key        = oci_vault_secret.auth_master_key.secret_name
+      internal_api_key       = oci_vault_secret.internal_api_key.secret_name
+      self_healing_token     = oci_vault_secret.self_healing_token.secret_name
+      grafana_admin_user     = oci_vault_secret.grafana_admin_user.secret_name
+      grafana_admin_password = oci_vault_secret.grafana_admin_password.secret_name
+      observability_integrations = {
+        for name, secret in oci_vault_secret.observability_integration : name => secret.secret_name
+      }
     }
   }
 }

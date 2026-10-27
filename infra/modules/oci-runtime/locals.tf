@@ -5,7 +5,14 @@ locals {
     "targeting-service",
     "evaluation-service",
     "analytics-service",
+    "self-healing",
   ])
+
+  observability_integrations = {
+    new-relic-license-key     = "New Relic ingest license key used by the OTel Collector trace exporter."
+    pagerduty-integration-key = "PagerDuty Events API v2 integration key used by Grafana Alerting."
+    discord-webhook-url       = "Discord webhook URL used by Grafana Alerting notifications."
+  }
 
   database_names = {
     auth-service      = "auth_db"

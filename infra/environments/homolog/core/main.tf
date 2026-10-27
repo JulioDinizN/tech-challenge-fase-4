@@ -46,6 +46,7 @@ module "runtime" {
   nosql_write_units                    = var.nosql_write_units
   nosql_storage_in_gbs                 = var.nosql_storage_in_gbs
   kubernetes_namespace                 = var.kubernetes_namespace
+  observability_namespace              = var.observability_namespace
   create_workload_identity_policy      = var.create_workload_identity_policy
   freeform_tags                        = var.freeform_tags
 }

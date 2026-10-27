@@ -399,3 +399,9 @@ variable "freeform_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "observability_namespace" {
+  description = "Kubernetes namespace of the monitoring stack, used in OKE workload-identity policies."
+  type        = string
+  default     = "observability"
+}

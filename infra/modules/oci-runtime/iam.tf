@@ -3,7 +3,7 @@ resource "oci_identity_policy" "oke_workloads" {
 
   compartment_id = var.compartment_id
   name           = "${var.project_name}-oke-workloads"
-  description    = "Least-privilege access from ToggleMaster OKE workloads to OCI Queue, NoSQL, and Vault secrets."
+  description    = "Least-privilege access from ToggleMaster OKE workloads and observability components to OCI Queue, NoSQL, and Vault secrets."
   freeform_tags  = local.common_tags
 
   statements = [
@@ -16,5 +16,8 @@ resource "oci_identity_policy" "oke_workloads" {
     "Allow any-user to read secret-bundles in compartment id ${var.compartment_id} where all {request.principal.type = 'workload', request.principal.namespace = '${var.kubernetes_namespace}', request.principal.service_account = 'targeting-service', request.principal.cluster_id = '${oci_containerengine_cluster.main.id}', target.vault.id = '${oci_kms_vault.application.id}'}",
     "Allow any-user to read secret-bundles in compartment id ${var.compartment_id} where all {request.principal.type = 'workload', request.principal.namespace = '${var.kubernetes_namespace}', request.principal.service_account = 'evaluation-service', request.principal.cluster_id = '${oci_containerengine_cluster.main.id}', target.vault.id = '${oci_kms_vault.application.id}'}",
     "Allow any-user to read secret-bundles in compartment id ${var.compartment_id} where all {request.principal.type = 'workload', request.principal.namespace = '${var.kubernetes_namespace}', request.principal.service_account = 'database-init', request.principal.cluster_id = '${oci_containerengine_cluster.main.id}', target.vault.id = '${oci_kms_vault.application.id}'}",
+    "Allow any-user to read secret-bundles in compartment id ${var.compartment_id} where all {request.principal.type = 'workload', request.principal.namespace = '${var.kubernetes_namespace}', request.principal.service_account = 'self-healing', request.principal.cluster_id = '${oci_containerengine_cluster.main.id}', target.vault.id = '${oci_kms_vault.application.id}'}",
+    "Allow any-user to read secret-bundles in compartment id ${var.compartment_id} where all {request.principal.type = 'workload', request.principal.namespace = '${var.observability_namespace}', request.principal.service_account = 'grafana', request.principal.cluster_id = '${oci_containerengine_cluster.main.id}', target.vault.id = '${oci_kms_vault.application.id}'}",
+    "Allow any-user to read secret-bundles in compartment id ${var.compartment_id} where all {request.principal.type = 'workload', request.principal.namespace = '${var.observability_namespace}', request.principal.service_account = 'otel-collector', request.principal.cluster_id = '${oci_containerengine_cluster.main.id}', target.vault.id = '${oci_kms_vault.application.id}'}",
   ]
 }
