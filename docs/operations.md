@@ -54,6 +54,32 @@ O primeiro boot da build `1578` completou initramfs/cloud-init, mas revelou um s
 
 Não mostrar conteúdo de Secrets/state/tfvars. A revisão de prontidão deve distinguir arquivos preparados de valores e comportamento confirmados no ambiente real.
 
+## Fase 4: observabilidade e Self-Healing
+
+Complementa o bootstrap acima. Nada aqui é executado pelo CI.
+
+1. **Capacidade.** A stack de observabilidade adiciona cerca de 2 GiB de memória solicitada (Prometheus, Grafana, Loki, Collector por nó). Com dois workers de 1 OCPU/8 GB o cluster comporta a demonstração, mas `node_ocpus = 2` dá folga de CPU. Prometheus e Loki usam `emptyDir`: os dados somem se o pod reiniciar, o que é aceitável para a gravação e evita volumes de 50 GB.
+2. **Credenciais externas no Vault.** O `core` cria os segredos `<projeto>-new-relic-license-key`, `<projeto>-pagerduty-integration-key` e `<projeto>-discord-webhook-url` com valor provisório. Gravar os valores reais fora do Terraform, lendo-os de variáveis de ambiente (nunca digitá-los na linha de comando):
+
+   ```bash
+   oci vault secret update-base64 --secret-id <ocid-do-segredo> \
+     --secret-content-content "$(printf %s "$NEW_RELIC_LICENSE_KEY" | base64)"
+   ```
+
+   Repetir para PagerDuty (integration key do serviço com integração "Events API v2") e Discord (URL do webhook do canal). O token do Self-Healing e a senha do Grafana são gerados pelo próprio Vault.
+3. **Imagens.** O catálogo do CI tem seis imagens: os cinco serviços e `self-healing`. A primeira publicação precisa incluir as seis.
+4. **GitOps.** `configure-gitops.py` também preenche os segredos de `apps/self-healing` e `observability/config`. Validar com `validate_structure.py --ready`.
+5. **Ordem de sincronização.** `togglemaster-platform` → `observability-config` → `kube-prometheus-stack` e `loki` → `opentelemetry-collector` → serviços e `self-healing`. As sync waves seguem essa ordem; o Collector depende do Secret sincronizado pelo CSI.
+6. **Verificação.**
+
+   ```bash
+   kubectl get pods -n observability
+   kubectl -n observability port-forward svc/grafana 3000:80
+   ```
+
+   No Grafana: dashboard "ToggleMaster — Saúde do Ecossistema" com dados, regra `AuthService5xxErrorRate` em `Normal` e o contact point `togglemaster-incidents` testado pelo botão "Test" (abre um incidente de teste no PagerDuty e envia mensagem ao Discord). No New Relic: os cinco serviços em APM & Services e no Service Map.
+7. **Ensaio do incidente.** Seguir o runbook em [observability.md](observability.md#falha-injetada-para-a-demonstração).
+
 ## Encerramento
 
 Após salvar/revisar evidências: interromper promoções e desativar auto-sync, remover workloads/controladores na ordem revisada, esperar remoção do Service LoadBalancer e recursos de rede gerados por Kubernetes, encerrar platform e só então core. O bucket de state é protegido e permanece. Se a remoção do NGINX via Helm deixar o LB em término, esperar a limpeza antes de destruir subnets/NSGs. Plan de destruição, retenção de dados/backups e custos remanescentes precisam de revisão específica futura.

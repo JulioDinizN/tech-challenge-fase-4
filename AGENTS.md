@@ -15,12 +15,13 @@
 - Service CI must not receive application runtime secrets.
 - CI may publish only from main after all gates and only when ENABLE_OCIR_PUBLISH=true.
 - CI must never deploy directly; promotion ends in a GitOps commit.
-- Self-Healing is the only automation allowed to act on the cluster, limited to restarting Deployments in the togglemaster namespace.
+- Self-Healing (services/self-healing) is the only automation allowed to act on the cluster, limited to restarting allowlisted Deployments in the togglemaster namespace. It is a CI catalog entry, not a ToggleMaster microservice, and must not be instrumented into the Service Map.
 - Never add Co-Authored-By lines to commit messages.
 
 ## Monorepo rules
 
 - Keep .ci/services.json synchronized with services/.
+- Grafana dashboards and alert rules live only in the GitOps repository; docker-compose.yml mounts them from GITOPS_ROOT.
 - Shared CI logic belongs in .github/workflows/_service-ci.yml.
 - Test and publish only changed services unless a shared file changes.
 - Consolidate promotions into one GitOps commit.

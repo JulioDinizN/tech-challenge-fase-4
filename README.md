@@ -20,18 +20,26 @@ Cada serviço utiliza um workflow reutilizável, selecionado por uma matriz de a
 
 O Terraform provisiona a infraestrutura a partir de uma execução autenticada com state remoto. Seu CI verifica formatação, configuração e segurança; não executa plan/apply. O CI de aplicações não aplica manifests no cluster.
 
+## Observabilidade e resposta a incidentes (Fase 4)
+
+```text
+Serviços (SDK/auto-instrumentação OpenTelemetry) → OTel Collector → Prometheus · Loki · New Relic
+Grafana: dashboard + alerta → PagerDuty (incidente) · Discord (ChatOps) · Self-Healing (rollout restart)
+```
+
+Arquitetura, alerta, runbook e decisões em [docs/observability.md](docs/observability.md). Toda a stack roda localmente com `docker compose up -d --build`; ver [observabilidade local](docs/local-development.md#observabilidade-local).
+
 ## Estrutura
 
 ```text
 .ci/                         # Catálogo de serviços e ferramentas
 .github/workflows/           # Validação, publicação e promoção
-services/                    # auth, flag, targeting, evaluation e analytics
-docker/                      # Inicialização dos bancos de desenvolvimento
+services/                    # auth, flag, targeting, evaluation, analytics e self-healing
+docker/                      # Bancos, OTel Collector, Prometheus e Grafana do ambiente local
 docker-compose.yml           # Ambiente local
 infra/environments/homolog/  # Roots backend, core e platform
 infra/modules/oci-runtime/   # Recursos OCI separados por responsabilidade
 scripts/ci/                  # Detecção de alterações e promoção GitOps
-scripts/self-healing/        # Automação de resposta aos alertas
 scripts/                     # Bootstrap, verificações e geração dos documentos
 docs/                        # Arquitetura, observabilidade, operação, decisões e relatório
 ```

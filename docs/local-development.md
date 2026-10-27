@@ -14,7 +14,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Expected local shape:
+Expected local shape (além da stack de observabilidade descrita em [Observabilidade local](#observabilidade-local)):
 
 - 5 application containers:
   - `auth-service`
@@ -131,3 +131,39 @@ DB_SSLMODE=require
 ```
 
 Esse contrato evita colocar senha em ConfigMap/Terraform e mantém o mesmo código executável nos dois ambientes.
+
+## Observabilidade local
+
+O mesmo `docker compose up -d --build` sobe a stack da Fase 4. Dashboard e regra de alerta são montados a partir do repositório GitOps vizinho (`GITOPS_ROOT`, padrão `../tech-challenge-fase-4-gitops`).
+
+| Componente | URL |
+| --- | --- |
+| Grafana (admin/admin) | http://localhost:3000 |
+| Prometheus | http://localhost:9090 (`PROMETHEUS_PORT` muda a porta do host) |
+| Loki | http://localhost:3100 |
+| Jaeger (traces locais) | http://localhost:16686 |
+| OTel Collector (OTLP) | localhost:4317 (gRPC) e localhost:4318 (HTTP) |
+| Self-Healing (`DRY_RUN`) | http://localhost:8080/health |
+
+Gerar tráfego contínuo (cria a flag `demo-flag` e chama evaluation, flag e targeting):
+
+```bash
+python3 scripts/ops/generate-traffic.py --duration 300
+```
+
+Ensaiar o incidente: injetar erro no auth-service, aguardar cerca de 1 minuto em `Pending` e mais 1 minuto até `Firing` no Grafana Alerting, conferir a notificação no simulador e a ação do Self-Healing:
+
+```bash
+curl -X POST http://localhost:8001/admin/fault -H "Authorization: Bearer admin-secreto-123" -d '{"error_rate":60}'
+docker compose logs -f self-healing webhook-sink
+```
+
+No Compose o Self-Healing roda em `DRY_RUN` e apenas registra o reinício. Para concluir o ensaio, reiniciar manualmente (`docker compose restart auth-service`) e acompanhar o alerta voltar a `Normal`.
+
+Enviar os traces locais também ao New Relic (requer `NEW_RELIC_LICENSE_KEY` no `.env`):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.newrelic.yml up -d otel-collector
+```
+
+Sem OCI Queue, a aresta evaluation → analytics não aparece localmente; ela depende do cluster.
