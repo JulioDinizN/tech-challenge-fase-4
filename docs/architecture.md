@@ -16,28 +16,29 @@ Usamos somente `homolog`, um ambiente temporário para demonstração. O enuncia
 
 ## CI/CD e GitOps
 
-1. PR e push na main selecionam serviços alterados; mudanças compartilhadas selecionam os cinco.
+1. PR e push na main selecionam serviços alterados; mudanças compartilhadas selecionam todo o catálogo (os cinco serviços e o `self-healing`).
 2. Cada serviço usa jobs de build/testes, lint, SAST/SCA e build/scan de imagem. A sequência é bloqueante. Trivy reprova CRITICAL; lint e SAST também não toleram falhas.
 3. Somente push na main com `ENABLE_OCIR_PUBLISH=true` publica, após toda a matriz passar. Credenciais OCIR existem apenas no workflow separado de publicação. A imagem publicada é o artefato previamente escaneado.
 4. Promoção, habilitada por `ENABLE_GITOPS_PROMOTION=true`, consolida tags `sha-<12 hex>` em um commit no repositório GitOps. CI não faz deploy e o gate agregado inclui publicação e promoção.
 5. Argo CD monitora os overlays e reconcilia as aplicações com auto-sync habilitado para os serviços. A rastreabilidade é SHA fonte → tag/digest → commit GitOps → revisão Argo → imagem do pod.
 
-Os manifests de aplicações e recursos compartilhados ficam exclusivamente no repositório GitOps, com cinco Deployments. A aplicação raiz tem bootstrap manual; as aplicações de serviços reconciliam automaticamente. O CI GitOps valida estrutura, renderização e segurança, mas não bloqueia por si só a reconciliação do Argo após um commit.
+Os manifests de aplicações e recursos compartilhados ficam exclusivamente no repositório GitOps: seis Deployments no namespace `togglemaster` (os cinco serviços e o `self-healing`) e a stack de observabilidade no namespace `observability`. A aplicação raiz tem bootstrap manual; as aplicações de serviços reconciliam automaticamente. O CI GitOps valida estrutura, renderização e segurança, mas não bloqueia por si só a reconciliação do Argo após um commit.
 
 ## Runtime e segredos
 
-OKE Enhanced com dois workers E3; três PostgreSQL independentes para auth, flag e targeting; Redis para evaluation; Queue e NoSQL para analytics. Cinco registries privados OCIR. O Service do NGINX solicita o Load Balancer OCI, que deve ser removido enquanto o controller e o cluster ainda existem.
+OKE Enhanced com dois workers E3; três PostgreSQL independentes para auth, flag e targeting; Redis para evaluation; Queue e NoSQL para analytics. Seis repositórios privados no OCIR (cinco serviços e `self-healing`). O Service do NGINX solicita o Load Balancer OCI, que deve ser removido enquanto o controller e o cluster ainda existem.
 
-Vault gera oito segredos e o provider CSI usa Workload Identity. ConfigMaps contêm configuração não secreta. Jobs inicializam bancos e usuários restritos antes dos serviços. O pull secret OCIR tem bootstrap próprio, pois a imagem precisa ser obtida antes de montar os volumes CSI. Credenciais e planos/state não pertencem ao Git.
+O Vault guarda 14 segredos (seis senhas de banco, MASTER_KEY, chave interna de API, token do Self-Healing, usuário e senha do Grafana e as três credenciais externas de observabilidade) e o provider CSI usa Workload Identity. ConfigMaps contêm configuração não secreta. Jobs inicializam bancos e usuários restritos antes dos serviços. O pull secret OCIR tem bootstrap próprio, pois a imagem precisa ser obtida antes de montar os volumes CSI. Credenciais e planos/state não pertencem ao Git.
 
 Compose oferece desenvolvimento local. A validação das integrações OCI exige o ambiente cloud e o smoke pelo ingress.
 
 ## Diagramas e documentos
 
-![Entrega](diagrams/overall-architecture.png)
-![Runtime](diagrams/runtime-architecture.png)
+![Infraestrutura e runtime na OCI — Fase 4](diagrams/phase4-infrastructure.png)
+![Observabilidade e resposta a incidentes — Fase 4](diagrams/phase4-observability.png)
+![Fluxo de entrega: CI, GitOps e Terraform](diagrams/overall-architecture.png)
 
-As fontes `.drawio` são editáveis e `npm run diagrams:export` regenera os PNGs. Os desenhos representam a arquitetura; não são evidência de implantação.
+Os dois diagramas da Fase 4 têm como fonte os arquivos `.html` autocontidos da mesma pasta; o PNG é a renderização. O diagrama de entrega tem fonte `.drawio` e `npm run diagrams:export` regenera o PNG. O `runtime-architecture` é o desenho herdado da Fase 3, mantido como histórico e substituído pelo de infraestrutura da Fase 4. Os desenhos representam a arquitetura; não são evidência de implantação.
 
 - [Operação e encerramento](operations.md)
 - [Observabilidade](observability.md)

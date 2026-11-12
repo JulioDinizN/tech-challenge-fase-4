@@ -160,10 +160,10 @@ docker compose logs -f self-healing webhook-sink
 
 No Compose o Self-Healing roda em `DRY_RUN` e apenas registra o reinício. Para concluir o ensaio, reiniciar manualmente (`docker compose restart auth-service`) e acompanhar o alerta voltar a `Normal`.
 
-Enviar os traces locais também ao New Relic (requer `NEW_RELIC_LICENSE_KEY` no `.env`):
+Enviar os traces locais também ao Datadog (requer `DD_API_KEY` no `.env` ou em outro arquivo passado com `--env-file`; `DD_SITE` é opcional e o padrão é `datadoghq.com`):
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.newrelic.yml up -d otel-collector
+docker compose -f docker-compose.yml -f docker-compose.datadog.yml up -d otel-collector
 ```
 
-Sem OCI Queue, a aresta evaluation → analytics não aparece localmente; ela depende do cluster.
+No Datadog, os serviços aparecem com `env:local` em APM → Traces e no Service Map (Software Catalog → Map). Sem OCI Queue, a aresta evaluation → analytics não aparece localmente; ela depende do cluster.

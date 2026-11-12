@@ -36,8 +36,8 @@ O primeiro boot da build `1578` completou initramfs/cloud-init, mas revelou um s
 2. Revisar `core plan` e então provisionar. Criar kubeconfig no caminho privado e confirmar seu contexto. Preencher `platform/terraform.tfvars` com outputs de rede do core e o contexto explícito; `bootstrap_gitops=false` inicialmente.
 3. Revisar e provisionar platform. Os workloads são gerenciados pelo Argo CD. Se charts já existirem, importar releases antes de aplicar, evitando dois donos.
 4. Configurar GitHub Variables `OCIR_REGISTRY`, `OCIR_NAMESPACE`, `OCIR_REPOSITORY_PREFIX`; o prefixo deve ser o `project_name` do core. Secrets de publicação: OCIR_USERNAME, OCIR_AUTH_TOKEN e GITOPS_SSH_KEY (chave de deploy com escrita restrita ao GitOps). Nenhuma senha de aplicação vai ao CI. Segurança é obrigatória e independe de SECURITY_GATE_ENABLED.
-5. Publicar uma base dos cinco serviços a partir de um push na main com alteração compartilhada revisada e `ENABLE_OCIR_PUBLISH=true`, mantendo `ENABLE_GITOPS_PROMOTION=false` nesta primeira publicação. `workflow_dispatch` valida, mas não publica. Verificar imagem/digest de cada serviço. Não usar push manual de imagem como evidência de CI.
-6. Após as cinco imagens existirem, preencher GitOps localmente:
+5. Publicar uma base das seis imagens (cinco serviços e `self-healing`) a partir de um push na main com alteração compartilhada revisada e `ENABLE_OCIR_PUBLISH=true`, mantendo `ENABLE_GITOPS_PROMOTION=false` nesta primeira publicação. `workflow_dispatch` valida, mas não publica. Verificar imagem/digest de cada uma. Não usar push manual de imagem como evidência de CI.
+6. Após as seis imagens existirem, preencher GitOps localmente:
 
    ```bash
    python3 scripts/ops/configure-gitops.py \
@@ -49,7 +49,7 @@ O primeiro boot da build `1578` completou initramfs/cloud-init, mas revelou um s
    Esse comando lê apenas outputs conhecidos do core, substitui identificadores não secretos e as cinco tags iniciais; não aplica nem publica. Usá-lo somente no bootstrap, pois altera as tags dos cinco serviços. Revisar o diff antes de publicar. Promoções seguintes usam `promote_gitops.py` e preservam tags dos serviços inalterados.
 7. Criar o pull secret `ocir-pull-secret` no namespace `togglemaster` por canal privado, antes de iniciar workloads. Seu valor não pertence ao Git. Argo precisa de credencial de leitura se o repositório GitOps for privado.
 8. Após entradas revisadas no GitOps, habilitar `bootstrap_gitops=true` em platform. Sincronizar a aplicação raiz uma vez para criar AppProject, ApplicationSet e Application da plataforma. Sincronizar **primeiro** `togglemaster-platform` e esperar os três Jobs de banco concluírem. Namespace/config compartilhados pertencem somente a essa aplicação. Jobs são hooks Sync com limpeza após sucesso; inicialização é idempotente.
-9. Sincronizar os cinco serviços inicialmente e conferir saúde. Depois ativar `automated.enabled: true` no ApplicationSet e na aplicação de plataforma mediante diff revisado. Atualizar a raiz para propagar essa política. Ativar `DEPLOYMENT_READY=true` no CI GitOps e `ENABLE_GITOPS_PROMOTION=true` no principal. A raiz é bootstrap manual; os cinco serviços precisam auto-sync para a demonstração.
+9. As Applications já têm `automated.enabled: true` no Git, portanto reconciliam sozinhas assim que a raiz as cria: por isso `validate_structure.py --ready` precisa passar **antes** do passo 8. Enquanto os Jobs de banco não concluem, os serviços ficam em retry e se recuperam sozinhos. Conferir a saúde dos cinco serviços e do `self-healing`. Ativar `DEPLOYMENT_READY=true` no CI GitOps e `ENABLE_GITOPS_PROMOTION=true` no principal. A raiz é bootstrap manual; os cinco serviços precisam auto-sync para a demonstração.
 10. Ensaiar PR vermelho → correção → merge → scan/publicação → commit GitOps → sync automático. Validar imagem/digest e smoke. O smoke altera dados de demonstração; executá-lo somente nessa janela.
 
 Não mostrar conteúdo de Secrets/state/tfvars. A revisão de prontidão deve distinguir arquivos preparados de valores e comportamento confirmados no ambiente real.
@@ -59,11 +59,11 @@ Não mostrar conteúdo de Secrets/state/tfvars. A revisão de prontidão deve di
 Complementa o bootstrap acima. Nada aqui é executado pelo CI.
 
 1. **Capacidade.** A stack de observabilidade adiciona cerca de 2 GiB de memória solicitada (Prometheus, Grafana, Loki, Collector por nó). Com dois workers de 1 OCPU/8 GB o cluster comporta a demonstração, mas `node_ocpus = 2` dá folga de CPU. Prometheus e Loki usam `emptyDir`: os dados somem se o pod reiniciar, o que é aceitável para a gravação e evita volumes de 50 GB.
-2. **Credenciais externas no Vault.** O `core` cria os segredos `<projeto>-new-relic-license-key`, `<projeto>-pagerduty-integration-key` e `<projeto>-discord-webhook-url` com valor provisório. Gravar os valores reais fora do Terraform, lendo-os de variáveis de ambiente (nunca digitá-los na linha de comando):
+2. **Credenciais externas no Vault.** O `core` cria os segredos `<projeto>-datadog-api-key`, `<projeto>-pagerduty-integration-key` e `<projeto>-discord-webhook-url` com valor provisório. Gravar os valores reais fora do Terraform, lendo-os de variáveis de ambiente (nunca digitá-los na linha de comando):
 
    ```bash
    oci vault secret update-base64 --secret-id <ocid-do-segredo> \
-     --secret-content-content "$(printf %s "$NEW_RELIC_LICENSE_KEY" | base64)"
+     --secret-content-content "$(printf %s "$DD_API_KEY" | base64)"
    ```
 
    Repetir para PagerDuty (integration key do serviço com integração "Events API v2") e Discord (URL do webhook do canal). O token do Self-Healing e a senha do Grafana são gerados pelo próprio Vault.
@@ -77,7 +77,7 @@ Complementa o bootstrap acima. Nada aqui é executado pelo CI.
    kubectl -n observability port-forward svc/grafana 3000:80
    ```
 
-   No Grafana: dashboard "ToggleMaster — Saúde do Ecossistema" com dados, regra `AuthService5xxErrorRate` em `Normal` e o contact point `togglemaster-incidents` testado pelo botão "Test" (abre um incidente de teste no PagerDuty e envia mensagem ao Discord). No New Relic: os cinco serviços em APM & Services e no Service Map.
+   No Grafana: dashboard "ToggleMaster — Saúde do Ecossistema" com dados, regra `AuthService5xxErrorRate` em `Normal` e o contact point `togglemaster-incidents` testado pelo botão "Test" (abre um incidente de teste no PagerDuty e envia mensagem ao Discord). No Datadog (`env:homolog`): os cinco serviços em APM → Traces e no Service Map (Software Catalog → Map). O site da conta fica em `DD_SITE` nos values do Collector (padrão `datadoghq.com`).
 7. **Ensaio do incidente.** Seguir o runbook em [observability.md](observability.md#falha-injetada-para-a-demonstração).
 
 ## Encerramento
@@ -94,7 +94,7 @@ Verificar no encerramento recursos gerados pelo Kubernetes, volumes, backups, im
 
 Além das quotas, conferir a identidade que executará Terraform: permissões de gerenciamento PostgreSQL/rede e leitura de `secret-family` e `vaults`, conforme a [política oficial do PostgreSQL](https://docs.oracle.com/en-us/iaas/Content/postgresql/policies.htm). Não adicionar um grant amplo a `service psql` com base apenas em uma hipótese de revisão. A leitura dos bundles pelo serviço e a montagem CSI permanecem verificações do bootstrap real. A condição `target.vault.id` é documentada nas [políticas comuns da Oracle](https://docs.oracle.com/en-us/iaas/Content/Identity/Concepts/commonpolicies.htm) para limitar acesso a uma família de segredos; mantê-la até existir evidência concreta que exija ajuste.
 
-O prazo de 20 minutos é para o vídeo editado, não para provisionamento/validação/teardown. A reconciliação do Argo configurada em 60s também não garante rollout saudável em 60s; salvar a sequência real de commits e operações.
+O prazo de 25 minutos é para o vídeo editado, não para provisionamento/validação/teardown. A reconciliação do Argo configurada em 60s também não garante rollout saudável em 60s; salvar a sequência real de commits e operações.
 
 A OCI Cache adiciona automaticamente a `redis-security-list` à subnet de dados. O Terraform preserva essa associação gerenciada pelo serviço com `ignore_changes` somente em `security_list_ids` dessa subnet; os NSGs do projeto continuam versionados.
 

@@ -24,7 +24,7 @@ def fixture():
             'postgres_app_passwords':{s:f'{s}-app' for s in DB},
             'auth_master_key':'auth-master','internal_api_key':'internal-api',
             'self_healing_token':'self-healing-token','grafana_admin_user':'grafana-user','grafana_admin_password':'grafana-password',
-            'observability_integrations':{'new-relic-license-key':'nr-key','pagerduty-integration-key':'pd-key','discord-webhook-url':'discord-url'}}},
+            'observability_integrations':{'datadog-api-key':'dd-key','pagerduty-integration-key':'pd-key','discord-webhook-url':'discord-url'}}},
         'redis':{'tls_url':'rediss://cache.fixture:6379'},
         'evaluation_queue':{'id':'ocid1.queue.oc1.iad.fixture','messages_endpoint':'https://queue.fixture'},
         'analytics_table':{'id':'ocid1.nosqltable.oc1.iad.fixture'},

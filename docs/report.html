@@ -8,7 +8,7 @@
 </head>
 <body><main>
 <header>
-<div class="eyebrow">POSTECH · GRUPO 100 · FASE 4</div>
+<div class="eyebrow">POSTECH · GRUPO 119 · FASE 4</div>
 <h1>ToggleMaster</h1>
 <p class="meta">Relatório de entrega · Observabilidade, APM e Self-Healing</p>
 </header>
@@ -30,14 +30,33 @@
 </section>
 <section>
 <h2>2. Arquitetura de observabilidade</h2>
-<p class="pending">Pendente: fluxo dos serviços para o OpenTelemetry Collector e roteamento para Prometheus, Loki e APM.</p>
+<p>O cluster Kubernetes é o <strong>OKE, da Oracle Cloud (OCI)</strong>, usado no lugar do EKS citado no enunciado. A substituição de provedor foi aceita pela disciplina nas fases anteriores e vale para toda a base: Terraform, CI/CD, GitOps com Argo CD e os serviços gerenciados.</p>
+<p>Os cinco microsserviços usam as bibliotecas do OpenTelemetry: SDK em Go no <code>auth-service</code> e no <code>evaluation-service</code>, instrumentação automática em Python (<code>opentelemetry-instrument</code> no Dockerfile) no <code>flag-service</code>, no <code>targeting-service</code> e no <code>analytics-service</code>. Nenhum serviço conhece Prometheus, Loki ou o APM: todos enviam métricas, logs e traces por OTLP/HTTP para o <strong>OpenTelemetry Collector</strong>, que roda como DaemonSet no namespace <code>observability</code>.</p>
+<p>O Collector é a peça central. Recebe OTLP dos serviços e lê os logs de todos os demais contêineres do cluster (<code>file_log</code>), enriquece tudo com metadados do Kubernetes (<code>k8s_attributes</code>) e roteia por três pipelines:</p>
+<table>
+<thead><tr><th scope="col">Sinal</th><th scope="col">Exporter do Collector</th><th scope="col">Destino</th></tr></thead>
+<tbody>
+<tr><td>Métricas</td><td><code>prometheus_remote_write</code></td><td>Prometheus, que também coleta kubelet, kube-state-metrics e node-exporter</td></tr>
+<tr><td>Logs</td><td><code>otlp_http/loki</code></td><td>Loki (ingestão OTLP nativa)</td></tr>
+<tr><td>Traces</td><td><code>datadog</code>, com o connector <code>datadog/connector</code> para as estatísticas de APM</td><td>Datadog (Distributed Tracing e Service Map)</td></tr>
+</tbody>
+</table>
+<p>O contexto de trace W3C (<code>traceparent</code>) acompanha as chamadas HTTP do <code>evaluation-service</code> para <code>flag-service</code> e <code>targeting-service</code>, e destes para o <code>auth-service</code>. Na fila, o <code>evaluation-service</code> grava o contexto no campo <code>trace_context</code> do evento e o <code>analytics-service</code> continua o mesmo trace ao consumir, o que coloca os cinco serviços no Service Map.</p>
+<p>O Grafana lê Prometheus e Loki. Dashboard, regra de alerta e contact points são arquivos versionados no repositório GitOps, carregados por sidecars. A regra <code>AuthService5xxErrorRate</code> (5xx do <code>auth-service</code> acima de 5% por 1 minuto) aciona um contact point com três destinos: incidente no PagerDuty, mensagem no Discord e o webhook do Self-Healing, que executa o equivalente a <code>kubectl rollout restart deployment/auth-service</code> pela API do Kubernetes.</p>
+<p>Toda a stack (kube-prometheus-stack, Loki e OpenTelemetry Collector) é instalada pelo Argo CD a partir de charts Helm com versão fixa no repositório GitOps. As credenciais externas ficam no OCI Vault e chegam aos pods por Secrets Store CSI e Workload Identity.</p>
+<figure><img src="diagrams/phase4-observability.png" alt="Fluxo de telemetria e resposta a incidentes"><figcaption>Fluxo de telemetria pelo OpenTelemetry Collector e ciclo de alerta, incidente, ChatOps e Self-Healing.</figcaption></figure>
 </section>
 <section>
 <h2>3. Justificativa técnica</h2>
-<h3>APM: Datadog ou New Relic</h3>
-<p class="pending">Pendente.</p>
-<h3>Gestão de incidentes: PagerDuty ou OpsGenie</h3>
-<p class="pending">Pendente.</p>
+<h3>OpenTelemetry Collector como peça central</h3>
+<p>Com o Collector no meio, os serviços dependem só do padrão OTLP. Trocar ou acrescentar um backend, inclusive o APM, muda um exporter na configuração do Collector, sem alterar código nem reconstruir imagens. O Collector também resolve em um único ponto a coleta dos logs de todos os contêineres e a adição de metadados do Kubernetes. Usamos o OTel Collector padrão; o Grafana Alloy era opcional.</p>
+<h3>APM: Datadog em vez de New Relic</h3>
+<p>Escolhemos o Datadog pelo APM: o Service Map é montado a partir dos spans e mostra as dependências entre os serviços, e o trace distribuído traz cada chamada HTTP e cada consulta SQL como um recurso com tempo próprio. O Collector envia os traces pelo exporter <code>datadog</code>, e o connector <code>datadog</code> calcula as estatísticas de APM (taxa, erros e latência por serviço e recurso) a partir dos mesmos spans. Não há Datadog Agent nos nós nem biblioteca proprietária nos serviços, que continuam só com OpenTelemetry.</p>
+<p>O New Relic também atenderia e receberia os traces por um exporter OTLP genérico; o Datadog pede exporter e connector próprios. Aceitamos esse acoplamento porque ele fica isolado em um arquivo de configuração do Collector: trocar de APM continua sendo trocar um exporter, sem alterar código nem reconstruir imagens.</p>
+<h3>Gestão de incidentes: PagerDuty em vez de OpsGenie</h3>
+<p>O Grafana Alerting tem integração nativa com o PagerDuty pela Events API v2: o incidente é aberto quando o alerta entra em <code>Firing</code> e resolvido quando volta ao normal, sem código intermediário. A Atlassian anunciou o encerramento do OpsGenie e deixou de aceitar novos clientes, portanto não faz sentido adotá-lo em um projeto novo.</p>
+<h3>Self-Healing dentro do cluster</h3>
+<p>A automação é um receptor de webhook que roda no próprio cluster (<code>services/self-healing</code>) e é chamado pelo alerta. A API do OKE só aceita os CIDRs autorizados, então uma função externa ou um runner hospedado do GitHub não alcançariam o cluster sem expor credenciais. O receptor usa uma ServiceAccount cujo Role permite apenas <code>get</code> e <code>patch</code> nos cinco Deployments dos serviços, valida um token do Vault, só age em Deployments de uma lista permitida e aplica um intervalo mínimo de 5 minutos entre reinícios.</p>
 </section>
 <section>
 <h2>4. Evidências</h2>
@@ -48,5 +67,5 @@
 <li class="pending">Log/execução da automação de Self-Healing — pendente.</li>
 </ul>
 </section>
-<footer>ToggleMaster · Tech Challenge Fase 4 · Julio Cesar Diniz Nogueira · RM373719 · Grupo 100</footer>
+<footer>ToggleMaster · Tech Challenge Fase 4 · Julio Cesar Diniz Nogueira · RM373719 · Grupo 119</footer>
 </main></body></html>

@@ -1,6 +1,6 @@
 # OpenTelemetry Collector do ambiente local (Docker Compose).
 # Os serviços enviam OTLP; o Collector roteia métricas ao Prometheus, logs ao Loki
-# e traces ao Jaeger local. newrelic.yaml adiciona o APM quando houver license key.
+# e traces ao Jaeger local. datadog.yaml adiciona o APM quando houver API key.
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133

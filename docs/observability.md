@@ -1,6 +1,6 @@
 # Observabilidade — ToggleMaster Fase 4
 
-Camada de observabilidade e resposta a incidentes adicionada sobre a base da Fase 3: instrumentação OpenTelemetry nos cinco serviços, OpenTelemetry Collector como peça central, Prometheus, Loki e Grafana no cluster, New Relic como APM, alerta com PagerDuty e Discord, e Self-Healing automático.
+Camada de observabilidade e resposta a incidentes adicionada sobre a base da Fase 3: instrumentação OpenTelemetry nos cinco serviços, OpenTelemetry Collector como peça central, Prometheus, Loki e Grafana no cluster, Datadog como APM, alerta com PagerDuty e Discord, e Self-Healing automático.
 
 ## Fluxo de telemetria
 
@@ -11,10 +11,12 @@ flag · targeting · analytics (Python, auto-instr.) ┘── OTLP/HTTP ──�
                                                                         │  + k8s_attributes: namespace, pod, nó
                                                                         ├─ métricas ─▶ Prometheus (remote write)
                                                                         ├─ logs ─────▶ Loki (OTLP nativo)
-                                                                        └─ traces ───▶ New Relic (OTLP)
+                                                                        └─ traces ───▶ Datadog (exporter + connector datadog)
 Grafana ◀── Prometheus + Loki: dashboard, Explore e Grafana Alerting
 Grafana Alerting ──▶ PagerDuty (incidente) · Discord (ChatOps) · Self-Healing (rollout restart)
 ```
+
+![Observabilidade e resposta a incidentes](diagrams/phase4-observability.png)
 
 Os serviços só conhecem o endpoint OTLP do Collector (`OTEL_EXPORTER_OTLP_ENDPOINT`). Trocar de backend, inclusive de APM, muda apenas a configuração do Collector.
 
@@ -26,7 +28,7 @@ Os serviços só conhecem o endpoint OTLP do Collector (`OTEL_EXPORTER_OTLP_ENDP
 | Prometheus | Armazena métricas das aplicações (remote write) e do cluster (kubelet, node-exporter, kube-state-metrics) | GitOps `observability/values/kube-prometheus-stack.yaml` |
 | Loki | Logs centralizados de todos os contêineres | GitOps `observability/values/loki.yaml` |
 | Grafana | Dashboard, Explore e alertas; carregados por sidecars a partir de ConfigMaps | GitOps `observability/config/grafana/` |
-| New Relic | APM: Distributed Tracing e Service Map | Exporter OTLP do Collector |
+| Datadog | APM: Distributed Tracing e Service Map | Exporter `datadog` e connector `datadog/connector` do Collector; sem Datadog Agent |
 | PagerDuty | Incidente automático (Events API v2) | Contact point do Grafana |
 | Discord | Notificação detalhada (ChatOps) | Contact point do Grafana |
 | Self-Healing | Recebe o webhook do alerta e reinicia o Deployment | `services/self-healing/` e GitOps `apps/self-healing/` |
@@ -41,13 +43,15 @@ Todos os charts são Applications do Argo CD com versões fixas, no projeto `obs
 | evaluation-service | Go | SDK + `otelhttp` no servidor e no cliente HTTP; span de produtor na fila | traces, métricas HTTP, logs |
 | flag-service | Python/Flask | `opentelemetry-instrument` no Dockerfile (Flask, requests, psycopg2, logging) | traces, métricas HTTP/DB, logs |
 | targeting-service | Python/Flask | Igual ao flag-service | traces, métricas HTTP/DB, logs |
-| analytics-service | Python | `opentelemetry-instrument` + span de consumidor manual na leitura da OCI Queue | traces, logs |
+| analytics-service | Python | `opentelemetry-instrument` + span de consumidor manual na leitura da OCI Queue + contador `analytics.events.processed` | traces, logs, métrica de eventos processados |
 
 Detalhes relevantes:
 
 - **Propagação W3C (`traceparent`).** O evaluation-service propaga o contexto nas chamadas HTTP para flag e targeting; estes propagam para o auth-service.
 - **Fila.** O evaluation-service grava o `traceparent` no campo `trace_context` do evento publicado na OCI Queue (os metadados da fila exigem `channelId`, recurso que o projeto não usa). O analytics-service extrai esse contexto e cria o span `process togglemaster-analytics`, continuando o mesmo trace. Assim o Service Map mostra os cinco serviços.
 - **Métricas HTTP.** Go e Python emitem `http.server.request.duration` (convenção estável; Python com `OTEL_SEMCONV_STABILITY_OPT_IN=http`). No Prometheus: `http_server_request_duration_seconds_{count,sum,bucket}`, com o serviço no rótulo `job`.
+- **Worker sem HTTP.** O analytics-service não atende requisições, então sua vazão vem do contador `analytics.events.processed` (no Prometheus, `analytics_events_processed_total`, com `outcome="stored"` ou `"failed"`).
+- **Intervalo de exportação.** Os Deployments definem `OTEL_METRIC_EXPORT_INTERVAL=15000`, igual ao Compose. Com o padrão de 60 s do SDK, as consultas `rate(...[1m])` do dashboard e do alerta ficariam sem amostras suficientes.
 - **Logs com trace.** Logs emitidos durante uma requisição carregam `trace_id` e `span_id`. Os logs dos cinco serviços chegam por OTLP; os demais contêineres do cluster são lidos pelo `file_log` do Collector, que exclui os cinco serviços para não duplicar.
 - **`/health` não é rastreado**, para que as sondas do Kubernetes não poluam traces e taxas.
 - **psycopg2.** O `RealDictCursor` é definido no pool de conexões (e não em cada cursor) porque a instrumentação só rastreia cursores criados com a fábrica da conexão.
@@ -56,7 +60,7 @@ Detalhes relevantes:
 
 `ToggleMaster — Saúde do Ecossistema` (`observability/config/grafana/dashboards/togglemaster-overview.json`), com filtro por serviço:
 
-1. **Microsserviços:** requisições/s, % de 5xx, latência p95, 5xx do auth-service (mesma expressão do alerta), séries por serviço e por status HTTP.
+1. **Microsserviços:** requisições/s, % de 5xx, latência p95, 5xx do auth-service (mesma expressão do alerta), séries por serviço e por status HTTP, e eventos processados por segundo pelo analytics-service.
 2. **Recursos do cluster:** CPU e memória dos nós, CPU e memória por pod, réplicas do HPA, reinícios de contêiner.
 3. **Logs em tempo real:** logs dos serviços e um painel só com erros e avisos.
 
@@ -96,7 +100,7 @@ O Role `self-healing` só permite `get` e `patch` nos cinco Deployments listados
 ### Runbook: auth-service 5xx
 
 1. Abrir o dashboard pelo link da notificação e confirmar a taxa de 5xx e o impacto em flag/targeting/evaluation.
-2. No Loki: `{service_name="auth-service"} | severity_text="ERROR"`; abrir o `trace_id` de uma linha no New Relic.
+2. No Loki: `{service_name="auth-service"} | severity_text="ERROR"`; buscar o `trace_id` de uma linha em APM → Traces no Datadog.
 3. Conferir a ação automática: `kubectl logs deploy/self-healing -n togglemaster` e `kubectl rollout history deployment/auth-service -n togglemaster`.
 4. Se a taxa não voltar ao normal em 5 minutos, o problema não é de estado do processo: investigar banco (`db_client_operation_duration_seconds`) e dependências. O cooldown impede um segundo reinício automático nesse intervalo.
 
@@ -108,7 +112,7 @@ O auth-service aceita `POST /admin/fault` (protegido pela MASTER_KEY) somente qu
 curl -X POST "$AUTH_URL/admin/fault" -H "Authorization: Bearer $MASTER_KEY" -d '{"error_rate":60}'
 ```
 
-A falha vale por pod; com mais de uma réplica, chamar cada pod (ou usar `error_rate` alto).
+O Ingress só publica `/validate` do auth-service, então `/admin/fault` não é alcançável de fora do cluster: `AUTH_URL` é um port-forward (`kubectl -n togglemaster port-forward deploy/auth-service 8001:8001` → `http://localhost:8001`). A falha vale por pod; com mais de uma réplica, chamar cada pod (ou usar `error_rate` alto).
 
 ## Execução local
 
@@ -123,7 +127,7 @@ Limites do ambiente local:
 ## Decisões
 
 - **OpenTelemetry Collector como peça central** (obrigatório): serviços independentes de fornecedor; o Collector adiciona metadados do Kubernetes e coleta os logs dos nós.
-- **New Relic como APM:** recebe OTLP nativamente, sem agente proprietário; o Service Map e o Distributed Tracing são gerados a partir dos spans OpenTelemetry. O Datadog exigiria exporter e conector específicos para o mapa de serviços.
+- **Datadog como APM:** O Collector envia os traces pelo exporter `datadog`, e o connector `datadog` calcula as estatísticas de APM (taxa, erros e latência por serviço e recurso) a partir dos spans. Com isso o Service Map e o Distributed Tracing funcionam sem Datadog Agent nos nós e sem biblioteca proprietária nos serviços, que continuam só com OpenTelemetry. Em relação ao New Relic, que receberia os traces por um exporter OTLP genérico, o Datadog pede exporter e connector próprios; esse acoplamento fica isolado na configuração do Collector, e a troca de APM continua sem tocar no código dos serviços. O site da conta é configurável (`DD_SITE`, padrão `datadoghq.com`).
 - **PagerDuty para incidentes:** integração nativa com o Grafana Alerting, abertura e resolução automáticas. A Atlassian está descontinuando o OpsGenie e não aceita novos cadastros.
 - **Grafana Alerting como origem do alerta:** uma única regra versionada aciona incidente, ChatOps e Self-Healing; o Alertmanager do kube-prometheus-stack fica desligado.
 - **Self-Healing dentro do cluster:** a API do OKE aceita somente os CIDRs autorizados, portanto um runner hospedado do GitHub não alcançaria o cluster. O receptor interno usa RBAC mínimo e não expõe credenciais do cluster fora dele.

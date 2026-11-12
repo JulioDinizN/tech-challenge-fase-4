@@ -1,0 +1,21 @@
+# Sobrescrita opcional: envia os traces também ao Datadog (APM).
+# Uso: docker compose -f docker-compose.yml -f docker-compose.datadog.yml up
+# O connector calcula as estatísticas de APM (taxa, erros, latência) a partir dos spans;
+# o exporter envia traces e essas estatísticas. Não há Datadog Agent.
+connectors:
+  datadog/connector: {}
+
+exporters:
+  datadog:
+    api:
+      site: ${env:DD_SITE}
+      key: ${env:DD_API_KEY}
+
+service:
+  pipelines:
+    traces:
+      exporters: [otlp_grpc/jaeger, datadog/connector, datadog]
+    metrics/apm:
+      receivers: [datadog/connector]
+      processors: [memory_limiter, batch]
+      exporters: [datadog]

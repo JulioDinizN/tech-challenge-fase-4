@@ -62,7 +62,7 @@ def replacements(outputs, image_tag):
         "__OCI_SELF_HEALING_TOKEN_SECRET_NAME__": required(names, "self_healing_token"),
         "__OCI_GRAFANA_ADMIN_USER_SECRET_NAME__": required(names, "grafana_admin_user"),
         "__OCI_GRAFANA_ADMIN_PASSWORD_SECRET_NAME__": required(names, "grafana_admin_password"),
-        "__OCI_NEW_RELIC_LICENSE_KEY_SECRET_NAME__": required(integrations, "new-relic-license-key"),
+        "__OCI_DATADOG_API_KEY_SECRET_NAME__": required(integrations, "datadog-api-key"),
         "__OCI_PAGERDUTY_INTEGRATION_KEY_SECRET_NAME__": required(integrations, "pagerduty-integration-key"),
         "__OCI_DISCORD_WEBHOOK_URL_SECRET_NAME__": required(integrations, "discord-webhook-url"),
     }

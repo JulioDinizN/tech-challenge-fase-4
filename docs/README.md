@@ -11,10 +11,12 @@
 
 | Visão | Fonte editável | Exportação |
 | --- | --- | --- |
-| Infraestrutura e entrega | [Draw.io](diagrams/overall-architecture.drawio) | [PNG](diagrams/overall-architecture.png) |
-| Runtime OCI | [Draw.io](diagrams/runtime-architecture.drawio) | [PNG](diagrams/runtime-architecture.png) |
+| Infraestrutura e runtime na OCI (Fase 4) | [HTML](diagrams/phase4-infrastructure.html) | [PNG](diagrams/phase4-infrastructure.png) |
+| Observabilidade e resposta a incidentes (Fase 4) | [HTML](diagrams/phase4-observability.html) | [PNG](diagrams/phase4-observability.png) |
+| Fluxo de entrega: CI, GitOps e Terraform | [Draw.io](diagrams/overall-architecture.drawio) | [PNG](diagrams/overall-architecture.png) |
+| Runtime OCI da Fase 3 (histórico) | [Draw.io](diagrams/runtime-architecture.drawio) | [PNG](diagrams/runtime-architecture.png) |
 
-As fontes `.drawio` são editáveis. `npm run diagrams:export` regenera os PNGs com draw.io Desktop; `DRAWIO_BIN` permite indicar outro caminho para o executável.
+Os diagramas da Fase 4 são HTML autocontido com o PNG renderizado ao lado. As fontes `.drawio` são editáveis. `npm run diagrams:export` regenera os PNGs com draw.io Desktop; `DRAWIO_BIN` permite indicar outro caminho para o executável.
 
 ## Relatório
 

@@ -1,0 +1,8 @@
+# Envia os traces locais também ao Datadog. Requer DD_API_KEY no ambiente ou no .env.
+# docker compose -f docker-compose.yml -f docker-compose.datadog.yml up -d
+services:
+  otel-collector:
+    command: ["--config=/etc/otelcol/config.yaml", "--config=/etc/otelcol/datadog.yaml"]
+    environment:
+      DD_API_KEY: ${DD_API_KEY:?defina DD_API_KEY no .env}
+      DD_SITE: ${DD_SITE:-datadoghq.com}

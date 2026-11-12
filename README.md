@@ -23,7 +23,7 @@ O Terraform provisiona a infraestrutura a partir de uma execução autenticada c
 ## Observabilidade e resposta a incidentes (Fase 4)
 
 ```text
-Serviços (SDK/auto-instrumentação OpenTelemetry) → OTel Collector → Prometheus · Loki · New Relic
+Serviços (SDK/auto-instrumentação OpenTelemetry) → OTel Collector → Prometheus · Loki · Datadog (APM)
 Grafana: dashboard + alerta → PagerDuty (incidente) · Discord (ChatOps) · Self-Healing (rollout restart)
 ```
 

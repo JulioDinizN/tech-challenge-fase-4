@@ -9,7 +9,7 @@ locals {
   ])
 
   observability_integrations = {
-    new-relic-license-key     = "New Relic ingest license key used by the OTel Collector trace exporter."
+    datadog-api-key           = "Datadog API key used by the OTel Collector datadog exporter (APM traces)."
     pagerduty-integration-key = "PagerDuty Events API v2 integration key used by Grafana Alerting."
     discord-webhook-url       = "Discord webhook URL used by Grafana Alerting notifications."
   }
