@@ -1,4 +1,4 @@
 region = "us-ashburn-1"
 compartment_id = "replace-with-compartment-ocid"
 namespace = "replace-with-namespace"
-bucket_name = "togglemaster-phase3-state"
+bucket_name = "togglemaster-tfstate-group119"

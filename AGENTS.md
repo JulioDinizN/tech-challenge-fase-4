@@ -30,7 +30,8 @@
 ## Terraform ownership
 
 - The only roots are infra/environments/homolog/backend, core and platform.
-- backend owns the state bucket and keeps the Phase 3 state key because that state still owns the retained bucket; core owns OCI resources through modules/oci-runtime.
+- backend owns the Phase 4 state bucket (togglemaster-tfstate-group119) under its own Phase 4 state key; core owns OCI resources through modules/oci-runtime.
+- The Phase 3 bucket (togglemaster-tfstate-group76) still holds Phase 3 state. Never reuse, rename or delete it without explicit authorization.
 - platform owns cluster add-ons and Argo bootstrap through Helm.
 - Use native OCI backends with distinct Object Storage keys.
 - Application manifests belong only in the GitOps repository.
