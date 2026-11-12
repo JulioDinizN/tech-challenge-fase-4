@@ -2,6 +2,7 @@ import json
 import os
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
 os.environ["ANALYTICS_WORKER_ENABLED"] = "false"
 
@@ -72,6 +73,25 @@ class ProcessMessageTests(unittest.TestCase):
 
 
 class TraceContextTests(unittest.TestCase):
+    def test_counts_processed_events_by_outcome(self):
+        stored = SimpleNamespace(
+            id=1,
+            receipt="receipt-1",
+            content=json.dumps(
+                {"user_id": "u", "flag_name": "f", "result": True, "timestamp": "2026-07-09T12:00:00Z"}
+            ),
+        )
+        invalid = SimpleNamespace(id=2, receipt="receipt-2", content="not-json")
+
+        with mock.patch.object(analytics_app, "events_processed") as counter:
+            analytics_app.process_message(stored, FakeQueueClient(), FakeNosqlClient())
+            analytics_app.process_message(invalid, FakeQueueClient(), FakeNosqlClient())
+
+        self.assertEqual(
+            [call.args for call in counter.add.call_args_list],
+            [(1, {"outcome": "stored"}), (1, {"outcome": "failed"})],
+        )
+
     def test_consumer_span_continues_producer_trace(self):
         from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider

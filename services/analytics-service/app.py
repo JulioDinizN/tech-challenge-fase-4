@@ -8,7 +8,7 @@ import time
 import oci
 from dotenv import load_dotenv
 from flask import Flask, jsonify
-from opentelemetry import propagate, trace
+from opentelemetry import metrics, propagate, trace
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
 # Logs no stdout. Com OpenTelemetry ativo, o handler OTLP já está na raiz e
@@ -35,6 +35,12 @@ OCI_AUTH_MODE = os.getenv("OCI_AUTH_MODE", "workload_identity").lower()
 ANALYTICS_QUEUE_NAME = "togglemaster-analytics"
 
 tracer = trace.get_tracer("analytics-service")
+# O worker não atende requisições HTTP, então sua vazão é medida por este contador.
+# No Prometheus: analytics_events_processed_total{outcome="stored"|"failed"}.
+events_processed = metrics.get_meter("analytics-service").create_counter(
+    "analytics.events.processed",
+    description="Eventos de avaliação lidos da fila, por resultado do processamento.",
+)
 
 
 def validate_worker_configuration():
@@ -135,6 +141,7 @@ def process_message(message, queue=None, nosql=None):
         },
     ) as span:
         processed = _store_message(message, queue, nosql)
+        events_processed.add(1, {"outcome": "stored" if processed else "failed"})
         if not processed:
             span.set_status(Status(StatusCode.ERROR, "message not processed"))
         return processed
