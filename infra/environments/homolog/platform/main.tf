@@ -71,8 +71,14 @@ resource "helm_release" "argocd" {
   atomic           = true
   timeout          = 600
   values = [yamlencode({
-    server  = { service = { type = "ClusterIP" } }
-    configs = { cm = { "timeout.reconciliation" = "60s" } }
+    server = { service = { type = "ClusterIP" } }
+    configs = { cm = {
+      "timeout.reconciliation" = "60s"
+      # The NGINX controller does not publish the load balancer address on the Ingress status,
+      # so Argo CD's default health check would keep the Ingress (and every later sync wave,
+      # including the database init Jobs) in Progressing forever.
+      "resource.customizations.health.networking.k8s.io_Ingress" = "hs = {}\nhs.status = \"Healthy\"\nreturn hs\n"
+    } }
   })]
 }
 resource "helm_release" "gitops_root" {

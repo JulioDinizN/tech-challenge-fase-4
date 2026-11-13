@@ -69,8 +69,9 @@ Complementa o bootstrap acima. Nada aqui é executado pelo CI.
    Repetir para PagerDuty (integration key do serviço com integração "Events API v2") e Discord (URL do webhook do canal). O token do Self-Healing e a senha do Grafana são gerados pelo próprio Vault.
 3. **Imagens.** O catálogo do CI tem seis imagens: os cinco serviços e `self-healing`. A primeira publicação precisa incluir as seis.
 4. **GitOps.** `configure-gitops.py` também preenche os segredos de `apps/self-healing` e `observability/config`. Validar com `validate_structure.py --ready`.
-5. **Ordem de sincronização.** `togglemaster-platform` → `observability-config` → `kube-prometheus-stack` e `loki` → `opentelemetry-collector` → serviços e `self-healing`. As sync waves seguem essa ordem; o Collector depende do Secret sincronizado pelo CSI.
-6. **Verificação.**
+5. **Particularidades do OKE vistas no bootstrap de 12/11/2026.** O controller NGINX não publica o endereço do Load Balancer no status do Ingress, e o Argo CD esperaria por isso antes de rodar os Jobs de banco; por isso o root `platform` define no Argo um health check que considera o Ingress saudável. O CRI-O dos nós recusa nomes curtos de imagem: toda imagem precisa do registro (`docker.io/...`). Se os serviços subirem antes dos Jobs de banco terminarem, eles reiniciam sozinhos até conseguirem autenticar.
+6. **Ordem de sincronização.** `togglemaster-platform` → `observability-config` → `kube-prometheus-stack` e `loki` → `opentelemetry-collector` → serviços e `self-healing`. As sync waves seguem essa ordem; o Collector depende do Secret sincronizado pelo CSI.
+7. **Verificação.**
 
    ```bash
    kubectl get pods -n observability
@@ -78,7 +79,7 @@ Complementa o bootstrap acima. Nada aqui é executado pelo CI.
    ```
 
    No Grafana: dashboard "ToggleMaster — Saúde do Ecossistema" com dados, regra `AuthService5xxErrorRate` em `Normal` e o contact point `togglemaster-incidents` testado pelo botão "Test" (abre um incidente de teste no PagerDuty e envia mensagem ao Discord). No Datadog (`env:homolog`): os cinco serviços em APM → Traces e no Service Map (Software Catalog → Map). O site da conta fica em `DD_SITE` nos values do Collector (padrão `datadoghq.com`).
-7. **Ensaio do incidente.** Seguir o runbook em [observability.md](observability.md#falha-injetada-para-a-demonstração).
+8. **Ensaio do incidente.** Seguir o runbook em [observability.md](observability.md#falha-injetada-para-a-demonstração).
 
 ## Encerramento
 
