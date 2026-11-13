@@ -20,4 +20,4 @@ Os diagramas da Fase 4 são HTML autocontido com o PNG renderizado ao lado. As f
 
 ## Relatório
 
-[HTML](report.html) é a fonte de impressão. `npm run report:pdf` gera `dist/delivery-report.pdf`, versionado junto com o HTML. O relatório incluirá o link do vídeo e as evidências exigidas pela Fase 4.
+[HTML](report.html) é a fonte de impressão. `npm run report:pdf` gera `dist/delivery-report.pdf`, versionado junto com o HTML. O relatório traz o link do vídeo e as evidências exigidas pela Fase 4; as capturas ficam em `docs/evidence/`.
