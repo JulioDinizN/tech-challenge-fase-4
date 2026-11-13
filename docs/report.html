@@ -27,6 +27,18 @@
 <li><a href="https://github.com/JulioDinizN/tech-challenge-fase-4/tree/main/docs">Documentação técnica</a></li>
 </ul>
 <p><strong>Vídeo de demonstração (20min05s):</strong> <a href="https://drive.google.com/drive/folders/15-CMmU3onMTld9xLVTTpMwazbzAwOhKI?usp=sharing">https://drive.google.com/drive/folders/15-CMmU3onMTld9xLVTTpMwazbzAwOhKI?usp=sharing</a> (arquivo <code>togglemaster-fase4-demo.mp4</code>).</p>
+<table>
+<thead><tr><th scope="col">Tempo</th><th scope="col">Parte do vídeo</th><th scope="col">Requisito demonstrado</th></tr></thead>
+<tbody>
+<tr><td>00:00</td><td>Apresentação</td><td>Contexto e objetivo da fase</td></tr>
+<tr><td>01:18</td><td>Visão geral</td><td>Cluster OKE criado por Terraform (03:10 e 03:50), Argo CD com as 12 aplicações e a nova stack (04:15), pipeline de CI (04:52)</td></tr>
+<tr><td>05:20</td><td>Arquitetura OpenTelemetry</td><td>Roteamento do Collector no diagrama e na configuração (07:22)</td></tr>
+<tr><td>07:29</td><td>Grafana e Loki</td><td>Dashboard customizado (07:37) e busca de logs no Loki (08:57)</td></tr>
+<tr><td>09:28</td><td>APM (Datadog)</td><td>Service Map com os cinco serviços (09:40), requisição de teste (10:37) e trace distribuído (11:08)</td></tr>
+<tr><td>11:26</td><td>Incidente e Self-Healing</td><td>Falha injetada (13:10), erros no dashboard e no Loki (13:50), pod substituído (15:15), Discord (15:25), PagerDuty (15:50), log do Self-Healing (16:25), recuperação (16:05) e incidente resolvido (17:10)</td></tr>
+<tr><td>17:22</td><td>Decisões e entregáveis</td><td>Justificativas e repositórios</td></tr>
+</tbody>
+</table>
 </section>
 <section>
 <h2>2. Arquitetura de observabilidade</h2>
@@ -56,20 +68,25 @@
 <h3>Gestão de incidentes: PagerDuty em vez de OpsGenie</h3>
 <p>O Grafana Alerting tem integração nativa com o PagerDuty pela Events API v2: o incidente é aberto quando o alerta entra em <code>Firing</code> e resolvido quando volta ao normal, sem código intermediário. A Atlassian anunciou o encerramento do OpsGenie e deixou de aceitar novos clientes, portanto não faz sentido adotá-lo em um projeto novo.</p>
 <h3>Self-Healing dentro do cluster</h3>
-<p>A automação é um receptor de webhook que roda no próprio cluster (<code>services/self-healing</code>) e é chamado pelo alerta. A API do OKE só aceita os CIDRs autorizados, então uma função externa ou um runner hospedado do GitHub não alcançariam o cluster sem expor credenciais. O receptor usa uma ServiceAccount cujo Role permite apenas <code>get</code> e <code>patch</code> nos cinco Deployments dos serviços, valida um token do Vault, só age em Deployments de uma lista permitida e aplica um intervalo mínimo de 5 minutos entre reinícios.</p>
+<p>A automação é um receptor de webhook que roda no próprio cluster (<code>services/self-healing</code>) e é chamado pelo alerta. A API do OKE só aceita os CIDRs autorizados; uma função externa ou um runner hospedado do GitHub exigiriam abrir esse acesso de rede e distribuir credenciais do cluster fora dele. O receptor interno evita as duas coisas: usa uma ServiceAccount cujo Role permite apenas <code>get</code> e <code>patch</code> nos cinco Deployments dos serviços, valida um token do Vault, só age em Deployments de uma lista permitida e aplica um intervalo mínimo de 5 minutos entre reinícios (controle em memória do processo, suficiente para evitar laços de reinício).</p>
 </section>
 <section class="chapter evidence">
 <h2>4. Evidências</h2>
-<p>Capturas feitas em 12/11/2026 no ambiente de homologação (cluster OKE <code>togglemaster-oke</code>), durante a gravação do vídeo. O incidente foi provocado injetando falha no <code>auth-service</code>; o alerta disparou às 01:53:10 UTC e foi resolvido às 01:54:20 UTC.</p>
+<p>Capturas do ambiente de homologação (cluster OKE <code>togglemaster-oke</code>) feitas na noite de 12/11/2026, durante e logo após a gravação do vídeo. Os horários das telas estão em Brasília (UTC−3); os dos logs, em UTC, já no dia 13/11. O incidente foi provocado injetando falha no <code>auth-service</code> às 22:51; o alerta disparou às 22:53:10 (01:53:10 UTC) e foi resolvido às 22:54:10.</p>
 <h3>4.1 Dashboard customizado no Grafana</h3>
-<figure><img src="evidence/grafana-dashboard.png" alt="Dashboard ToggleMaster no Grafana"><figcaption>Dashboard “ToggleMaster — Saúde do Ecossistema”: tráfego, erros e latência por microsserviço, eventos processados pelo analytics-service, recursos do cluster e logs em tempo real. O pico de erros 5xx às 22:53 (horário de Brasília) é o incidente da demonstração.</figcaption></figure>
+<figure><img src="evidence/grafana-dashboard.png" alt="Dashboard ToggleMaster no Grafana"><figcaption>Dashboard “ToggleMaster — Saúde do Ecossistema”: tráfego, erros e latência por microsserviço, eventos processados pelo analytics-service, recursos do cluster e logs em tempo real. O pico de erros 5xx às 22:53 é o incidente da demonstração.</figcaption></figure>
 <h3>4.2 Trace distribuído no APM (Datadog)</h3>
-<figure><img src="evidence/apm-trace.png" alt="Trace distribuído no Datadog"><figcaption>Trace de uma requisição <code>GET /evaluate</code>: 15 spans passando por evaluation-service, flag-service, targeting-service, auth-service, os bancos de dados e a fila até o analytics-service.</figcaption></figure>
+<p>Trace da requisição de teste feita com <code>curl</code> ao <code>GET /evaluate</code> às 22:34:22 (<code>trace_id 9bbe046a32929dde74e56bcd54ad98a4</code>, 15 spans).</p>
+<figure><img src="evidence/apm-trace-waterfall.png" alt="Trace completo em cascata no Datadog"><figcaption>Visão em cascata do trace completo: a entrada no evaluation-service, as duas chamadas HTTP (flag-service e targeting-service, cada uma com 5 spans) e a passagem pela fila, com <code>publish</code> pelo evaluation-service e <code>process</code> pelo analytics-service. O painel inferior mostra o <code>User Agent curl</code> da requisição de teste.</figcaption></figure>
+<figure><img src="evidence/apm-trace.png" alt="Detalhe do trace em flame graph no Datadog"><figcaption>Detalhe dos primeiros 17 ms do mesmo trace em flame graph: evaluation-service, flag-service, targeting-service, auth-service e as consultas SQL aos bancos, com o tempo de cada etapa.</figcaption></figure>
 <figure><img src="evidence/apm-service-map.png" alt="Service Map no Datadog"><figcaption>Service Map do ambiente <code>homolog</code> com os cinco microsserviços e a fila.</figcaption></figure>
-<h3>4.3 Notificação de incidente no ChatOps (Discord)</h3>
-<figure><img src="evidence/chatops-notification.png" alt="Notificação do alerta no Discord"><figcaption>Mensagens enviadas pelo Grafana Alerting ao canal: disparo com 69% de respostas 5xx e resolução após o Self-Healing. O mesmo alerta abriu e fechou automaticamente um incidente no PagerDuty.</figcaption></figure>
-<h3>4.4 Execução da automação de Self-Healing</h3>
-<figure><img src="evidence/self-healing-log.png" alt="Log do Self-Healing"><figcaption>Saída de <code>kubectl logs deploy/self-healing</code>: webhook recebido com status <code>firing</code>, <code>rollout restart</code> do <code>auth-service</code> concluído com status 200 e, um minuto depois, o webhook de resolução.</figcaption></figure>
+<h3>4.3 Alerta em Firing no Grafana</h3>
+<figure><img src="evidence/grafana-alert-history.png" alt="Histórico de estados da regra de alerta no Grafana"><figcaption>Histórico de estados da regra <code>AuthService5xxErrorRate</code> no Grafana Alerting para o incidente da gravação: <code>Pending</code> às 22:52:10 (41,6% de 5xx), <code>Alerting</code> (Firing) às 22:53:10 (69,0%) e <code>Normal</code> às 22:54:10, depois do Self-Healing. No vídeo, a página da regra não foi recarregada durante o incidente e por isso exibe o estado anterior; o disparo aparece ali pelo painel de erros, pelo Discord e pelo PagerDuty.</figcaption></figure>
+<h3>4.4 Incidente no PagerDuty e notificação no ChatOps (Discord)</h3>
+<figure><img src="evidence/pagerduty-incident.png" alt="Alerta e incidente no PagerDuty"><figcaption>PagerDuty durante a gravação (quadro do vídeo em 15:50): alerta <code>Triggered</code> criado às 22:53:20 pela integração Events API V2, com o incidente aberto automaticamente no serviço <code>togglemaster</code>. A linha <code>Resolved</code> é o ensaio feito mais cedo, às 21:06.</figcaption></figure>
+<figure><img src="evidence/chatops-notification.png" alt="Notificação do alerta no Discord"><figcaption>Mensagens enviadas pelo Grafana Alerting ao canal: disparo com 69% de respostas 5xx e resolução após o Self-Healing, com serviço, severidade, valor medido, horário, dashboard e runbook. O link do dashboard aponta para <code>localhost:3000</code> porque o Grafana da homologação não é exposto na internet e é acessado por <code>port-forward</code>.</figcaption></figure>
+<h3>4.5 Execução da automação de Self-Healing</h3>
+<figure><img src="evidence/self-healing-log.png" alt="Log do Self-Healing"><figcaption>Saída de <code>kubectl logs deploy/self-healing</code> (quadro do vídeo em 16:25): webhook recebido com status <code>firing</code>, pedido de <code>rollout restart</code> do <code>auth-service</code> aceito pela API do Kubernetes (status 200) e, um minuto depois, o webhook de resolução. A troca efetiva do pod aparece no vídeo em 15:15.</figcaption></figure>
 <p>Trecho do mesmo log, em texto, referente ao incidente da gravação:</p>
 <pre class="log">{&quot;time&quot;: &quot;2026-11-13T01:53:20.022843+00:00&quot;, &quot;level&quot;: &quot;INFO&quot;, &quot;message&quot;: &quot;webhook recebido&quot;, &quot;status&quot;: &quot;firing&quot;, &quot;alerts&quot;: 1}
 {&quot;time&quot;: &quot;2026-11-13T01:53:20.023421+00:00&quot;, &quot;level&quot;: &quot;WARNING&quot;, &quot;message&quot;: &quot;executando rollout restart&quot;, &quot;alertname&quot;: &quot;AuthService5xxErrorRate&quot;, &quot;namespace&quot;: &quot;togglemaster&quot;, &quot;deployment&quot;: &quot;auth-service&quot;, &quot;restarted_at&quot;: &quot;2026-11-13T01:53:20Z&quot;}
