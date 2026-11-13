@@ -71,6 +71,10 @@ PYTHON_BIN=/caminho/do/venv/bin/python ./scripts/validate.sh
 
 A verificação local não publica imagens nem altera o cluster. O ambiente de demonstração não possui teardown automático; seu encerramento exige revisão dos recursos e dos states descritos no procedimento de operação.
 
+## Situação do ambiente
+
+O ambiente de homologação na OCI foi criado para a demonstração em 12/11/2026 e **encerrado em 13/11/2026**, depois de gravado o vídeo, para não consumir créditos. O cluster, os bancos e a stack de observabilidade descritos aqui não estão mais no ar; o funcionamento está registrado no vídeo e nas evidências do [relatório](dist/delivery-report.pdf). Todo o ambiente pode ser recriado a partir deste repositório e do repositório GitOps, seguindo [docs/operations.md](docs/operations.md).
+
 ## Proveniência
 
 Este repositório evolui da Fase 3, commit `ccd8b7dbd66fe02561f87454442791d0d6681668` de `JulioDinizN/tech-challenge-fase-3`, preservando seu histórico. A stack de monitoramento, a instrumentação dos serviços e o Self-Healing são as adições da Fase 4.
